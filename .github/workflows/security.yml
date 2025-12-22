@@ -43,7 +43,7 @@ jobs:
           echo "high=$HIGH" >> $GITHUB_OUTPUT
 
       - name: Upload audit report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: npm-audit-report
           path: audit-report.json
@@ -81,7 +81,7 @@ jobs:
           output: 'trivy-fs-report.txt'
 
       - name: Upload Trivy report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: trivy-fs-report
           path: trivy-fs-report.txt
@@ -153,7 +153,7 @@ jobs:
           fi
 
       - name: Upload license report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: license-report
           path: license-summary.txt
