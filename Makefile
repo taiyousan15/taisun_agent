@@ -1,11 +1,12 @@
-# TAISUN v2 - Phase 1 Execution Foundation
-# Safe, idempotent tooling for document processing and development
+# TAISUN v2 - Execution Foundation
+# Phase 1: Document Processing | Phase 2: Monitoring
 
 .PHONY: help setup verify doctor tools-up tools-down docs-export clean
+.PHONY: monitoring-up monitoring-down monitoring-health monitoring-metrics monitoring-alerts
 
 # Default target
 help:
-	@echo "TAISUN v2 - Phase 1 Execution Foundation"
+	@echo "TAISUN v2 - Execution Foundation"
 	@echo ""
 	@echo "Usage: make <target>"
 	@echo ""
@@ -14,10 +15,17 @@ help:
 	@echo "  verify      - Verify all tools are properly configured"
 	@echo "  doctor      - Run diagnostic checks on the system"
 	@echo ""
-	@echo "Document Tools:"
+	@echo "Phase 1 - Document Tools:"
 	@echo "  tools-up    - Start Gotenberg and Stirling-PDF containers"
 	@echo "  tools-down  - Stop document processing containers"
 	@echo "  docs-export - Export documents using configured tools"
+	@echo ""
+	@echo "Phase 2 - Monitoring:"
+	@echo "  monitoring-up     - Start Prometheus/Grafana/Loki stack"
+	@echo "  monitoring-down   - Stop monitoring stack"
+	@echo "  monitoring-health - Check monitoring services health"
+	@echo "  monitoring-metrics - Show current system metrics"
+	@echo "  monitoring-alerts  - Show active alerts"
 	@echo ""
 	@echo "Maintenance:"
 	@echo "  clean       - Clean temporary files and caches"
@@ -100,6 +108,38 @@ docs-export:
 
 logs:
 	@docker-compose -f docker-compose.tools.yml logs -f
+
+# ============================================================
+# Phase 2: Monitoring Stack
+# ============================================================
+
+monitoring-up:
+	@echo "🚀 Starting monitoring stack..."
+	@docker-compose -f docker-compose.monitoring.yml up -d
+	@echo "⏳ Waiting for services to be ready..."
+	@sleep 10
+	@$(MAKE) monitoring-health
+	@echo ""
+	@echo "📊 Grafana:      http://localhost:3001 (admin/taisun2024)"
+	@echo "📈 Prometheus:   http://localhost:9090"
+	@echo "📋 Alertmanager: http://localhost:9093"
+	@echo "📝 Loki:         http://localhost:3100"
+
+monitoring-down:
+	@echo "🛑 Stopping monitoring stack..."
+	@docker-compose -f docker-compose.monitoring.yml down
+
+monitoring-health:
+	@./scripts/phase2/health-check.sh
+
+monitoring-metrics:
+	@./scripts/phase2/metrics.sh
+
+monitoring-alerts:
+	@./scripts/phase2/alerts.sh
+
+monitoring-logs:
+	@docker-compose -f docker-compose.monitoring.yml logs -f
 
 # ============================================================
 # MCP & Agent Commands
