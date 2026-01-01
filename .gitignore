@@ -48,5 +48,8 @@ tmp/
 temp/
 *.tmp
 
+# Memory storage (M3)
+.taisun/
+
 # Document exports
 docs/exports/

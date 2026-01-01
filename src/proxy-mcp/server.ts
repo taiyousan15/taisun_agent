@@ -146,7 +146,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
 
     case 'memory_add':
-      result = memoryAdd(
+      result = await memoryAdd(
         args?.content as string,
         (args?.type as 'short-term' | 'long-term') || 'short-term',
         args?.metadata as Record<string, unknown> | undefined
@@ -154,7 +154,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
 
     case 'memory_search':
-      result = memorySearch(args?.query as string);
+      result = await memorySearch(args?.query as string);
       break;
 
     default:
