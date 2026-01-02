@@ -4,6 +4,7 @@
  * M2 Update: Added routing support for internal MCP selection
  * M4 Update: Added web skills (read_url, extract_links, capture_dom_map)
  * M5 Update: Added skillize (URL→Skill generation)
+ * M6 Update: Added supervisor (LangGraph-based with human approval)
  */
 
 import * as fs from 'fs';
@@ -13,6 +14,12 @@ import { route, RouteResult } from '../router';
 import { getAllMcps, getRouterConfig } from '../internal/registry';
 import { readUrl, extractLinks, captureDomMap } from '../browser';
 import { skillize as skillizeCore, SkillizeOptions } from '../skillize';
+import {
+  runSupervisor,
+  resumeSupervisor,
+  checkDangerousPatterns,
+  SupervisorOptions,
+} from '../supervisor';
 
 const SKILLS_DIR = path.join(process.cwd(), '.claude', 'skills');
 
@@ -108,6 +115,11 @@ export function skillRun(
     // M5: Handle skillize (async, return promise wrapper)
     if (skillName === 'skillize') {
       return runSkillize(params);
+    }
+
+    // M6: Handle supervisor (async, return promise wrapper)
+    if (skillName === 'supervisor') {
+      return runSupervisorSync(params);
     }
 
     // Mode: preview or execute - Load skill content from files
@@ -238,6 +250,40 @@ function runSkillize(params?: Record<string, unknown>): ToolResult {
 }
 
 /**
+ * Run supervisor sync check (M6)
+ *
+ * Checks if input contains dangerous patterns and returns ready status.
+ */
+function runSupervisorSync(params?: Record<string, unknown>): ToolResult {
+  const input = params?.input as string;
+
+  if (!input) {
+    return {
+      success: false,
+      error: 'Input is required for supervisor. Use params.input to specify the task.',
+    };
+  }
+
+  const dangerousPatterns = checkDangerousPatterns(input);
+  const requiresApproval = dangerousPatterns.length > 0;
+
+  return {
+    success: true,
+    data: {
+      skill: 'supervisor',
+      input: input.substring(0, 100) + (input.length > 100 ? '...' : ''),
+      dangerousPatterns: dangerousPatterns.length > 0 ? dangerousPatterns : undefined,
+      requiresApproval,
+      status: 'ready',
+      message: requiresApproval
+        ? `Supervisor ready. Dangerous patterns detected: ${dangerousPatterns.join(', ')}. Approval will be required.`
+        : 'Supervisor ready. No dangerous patterns detected.',
+      asyncRequired: true,
+    },
+  };
+}
+
+/**
  * Run a web skill asynchronously (M4)
  *
  * This is the actual async execution of web skills.
@@ -247,6 +293,69 @@ export async function skillRunAsync(
   skillName: string,
   params?: Record<string, unknown>
 ): Promise<ToolResult> {
+  // M6: Handle supervisor (doesn't require URL)
+  if (skillName === 'supervisor') {
+    const input = params?.input as string;
+    if (!input) {
+      return {
+        success: false,
+        error: 'Input is required for supervisor. Use params.input to specify the task.',
+      };
+    }
+
+    try {
+      const options: SupervisorOptions = {
+        runId: params?.runId as string,
+        skipApproval: params?.skipApproval === true,
+        namespace: (params?.namespace as 'short-term' | 'long-term') || 'short-term',
+      };
+
+      // Check if resuming a paused run
+      if (params?.resume && params?.approvalIssue) {
+        const result = await resumeSupervisor(
+          params.resume as string,
+          params.approvalIssue as number,
+          options
+        );
+        return {
+          success: result.success,
+          referenceId: result.refId,
+          data: {
+            runId: result.runId,
+            step: result.step,
+            summary: result.summary,
+            requiresApproval: result.requiresApproval,
+            approvalIssue: result.approvalIssue,
+            ...result.data,
+          },
+          error: result.error,
+        };
+      }
+
+      // Run new supervisor
+      const result = await runSupervisor(input, options);
+      return {
+        success: result.success,
+        referenceId: result.refId,
+        data: {
+          runId: result.runId,
+          step: result.step,
+          summary: result.summary,
+          requiresApproval: result.requiresApproval,
+          approvalIssue: result.approvalIssue,
+          ...result.data,
+        },
+        error: result.error,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Supervisor failed: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  }
+
+  // Other skills require URL
   const url = params?.url as string;
 
   if (!url) {
@@ -332,7 +441,7 @@ export async function skillRunAsync(
       default:
         return {
           success: false,
-          error: `Unknown skill: ${skillName}. Available: web.read_url, web.extract_links, web.capture_dom_map, skillize`,
+          error: `Unknown skill: ${skillName}. Available: web.read_url, web.extract_links, web.capture_dom_map, skillize, supervisor`,
         };
     }
   } catch (error) {

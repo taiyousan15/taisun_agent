@@ -14,6 +14,8 @@ module.exports = {
     '!src/proxy-mcp/browser/skills.ts',     // requires chrome MCP (M4 integration)
     '!src/proxy-mcp/internal/mcp-client.ts', // requires external MCP servers
     '!src/proxy-mcp/skillize/skillize.ts',  // requires chrome MCP (M5 skillize)
+    '!src/proxy-mcp/supervisor/graph.ts',   // requires gh CLI (M6 supervisor)
+    '!src/proxy-mcp/supervisor/github.ts',  // requires gh CLI (M6 supervisor)
   ],
   testPathIgnorePatterns: ['/node_modules/'],
   // Transform TypeScript files
