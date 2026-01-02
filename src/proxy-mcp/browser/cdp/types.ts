@@ -73,6 +73,19 @@ export interface DOMElement {
   children?: DOMElement[];
 }
 
+export interface TabInfo {
+  url: string;
+  title: string;
+  index: number;
+}
+
+export interface TabsList {
+  tabs: TabInfo[];
+  totalTabs: number;
+  /** Preview list for minimal output */
+  tabsPreview: TabInfo[];
+}
+
 /** Patterns that indicate CAPTCHA or login requirements */
 export const CAPTCHA_PATTERNS = [
   /captcha/i,

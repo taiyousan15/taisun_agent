@@ -19,9 +19,6 @@ module.exports = {
     '!src/proxy-mcp/supervisor/github.ts',  // requires gh CLI (M6 supervisor)
     '!src/proxy-mcp/observability/post-to-issue.ts', // requires gh CLI
     '!src/proxy-mcp/observability/service.ts', // metrics collector integration
-    '!src/proxy-mcp/internal/rollout.ts',   // requires overlay config files
-    '!src/proxy-mcp/internal/overlay.ts',   // file-based config management
-    '!src/proxy-mcp/internal/resilience.ts', // complex retry timing logic
   ],
   testPathIgnorePatterns: ['/node_modules/'],
   // Transform TypeScript files

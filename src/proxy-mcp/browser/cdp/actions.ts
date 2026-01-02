@@ -13,6 +13,8 @@ import {
   PageContent,
   ExtractedLinks,
   DOMMap,
+  TabsList,
+  TabInfo,
   LinkInfo,
   DOMElement,
   detectCaptchaOrLogin,
@@ -269,5 +271,61 @@ export async function captureDOMMapViaCDP(
         // Ignore close errors
       }
     }
+  }
+}
+
+/** Max tabs in preview */
+const TABS_PREVIEW_COUNT = 10;
+
+/**
+ * List all tabs (pages) via CDP
+ *
+ * Returns all open tab URLs and titles from the browser.
+ * Does not navigate to any URL - just reads existing tabs.
+ */
+export async function listTabsViaCDP(
+  config?: Partial<CDPConfig>
+): Promise<CDPActionResult<TabsList>> {
+  try {
+    const connection = await connectCDP(config);
+
+    // Get all pages from all contexts
+    const allTabs: TabInfo[] = [];
+
+    // Get pages from all contexts
+    const contexts = connection.browser.contexts();
+    for (const context of contexts) {
+      const pages = context.pages();
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i];
+        try {
+          allTabs.push({
+            url: page.url(),
+            title: await page.title(),
+            index: allTabs.length,
+          });
+        } catch {
+          // Page might be closed or inaccessible
+          allTabs.push({
+            url: page.url() || 'about:blank',
+            title: '[Unable to get title]',
+            index: allTabs.length,
+          });
+        }
+      }
+    }
+
+    const result: TabsList = {
+      tabs: allTabs,
+      totalTabs: allTabs.length,
+      tabsPreview: allTabs.slice(0, TABS_PREVIEW_COUNT),
+    };
+
+    return { success: true, data: result };
+  } catch (err) {
+    return {
+      success: false,
+      error: `Failed to list tabs: ${err}`,
+    };
   }
 }

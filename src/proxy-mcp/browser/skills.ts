@@ -22,6 +22,7 @@ import {
   readUrlViaCDP,
   extractLinksViaCDP,
   captureDOMMapViaCDP,
+  listTabsViaCDP,
 } from './cdp';
 
 /** Backend type for web skills */
@@ -713,4 +714,88 @@ async function captureDomMapViaCDPWithMemory(
       message: `Use memory_search("${memResult.referenceId}") for full DOM map.`,
     },
   };
+}
+
+/**
+ * web.list_tabs_urls - List all open tab URLs via CDP
+ *
+ * Lists all open tabs in the connected Chrome browser.
+ * Stores full list in memory, returns summary + refId.
+ * CDP-only skill (requires Chrome running with --remote-debugging-port).
+ *
+ * @param options.namespace - Memory namespace for storage
+ */
+export async function listTabsUrls(
+  options?: {
+    namespace?: MemoryNamespace;
+  }
+): Promise<WebSkillResult> {
+  const namespace = options?.namespace || 'short-term';
+
+  try {
+    const result = await listTabsViaCDP();
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error,
+        data: {
+          help: [
+            'Ensure Chrome is running with CDP enabled:',
+            'npm run chrome:debug:start',
+            'or: /Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=9222',
+          ],
+        },
+      };
+    }
+
+    const tabsData = result.data!;
+
+    // Store full tab list in memory
+    const memResult = await memoryAdd(
+      JSON.stringify({
+        tabs: tabsData.tabs,
+        totalTabs: tabsData.totalTabs,
+        listedAt: new Date().toISOString(),
+        backend: 'cdp',
+      }),
+      namespace,
+      {
+        tags: ['web', 'tabs', 'cdp'],
+        source: 'web.list_tabs_urls',
+      }
+    );
+
+    if (!memResult.success) {
+      return {
+        success: false,
+        error: `Failed to store tabs: ${memResult.error}`,
+      };
+    }
+
+    // Summary with top tabs
+    const topTabs = tabsData.tabsPreview
+      .slice(0, 5)
+      .map((t) => `- [${t.index}] ${t.title || t.url}`);
+
+    const summary = `Found ${tabsData.totalTabs} open tabs:\n${topTabs.join('\n')}${tabsData.totalTabs > 5 ? '\n...' : ''}`;
+
+    return {
+      success: true,
+      action: 'allow',
+      refId: memResult.referenceId,
+      summary,
+      data: {
+        totalTabs: tabsData.totalTabs,
+        tabs: tabsData.tabsPreview,
+        backend: 'cdp',
+        message: `Use memory_search("${memResult.referenceId}") for full tab list.`,
+      },
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: `web.list_tabs_urls failed: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
 }

@@ -300,6 +300,91 @@ describe('Web Skills Backend Type', () => {
     expect(typeof skillsModule.readUrl).toBe('function');
     expect(typeof skillsModule.extractLinks).toBe('function');
     expect(typeof skillsModule.captureDomMap).toBe('function');
+    expect(typeof skillsModule.listTabsUrls).toBe('function');
+  });
+});
+
+describe('listTabsViaCDP', () => {
+  let listTabsViaCDP: typeof import('../../src/proxy-mcp/browser/cdp/actions').listTabsViaCDP;
+
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+
+    // Setup port as open
+    mockSocketInstance.connect.mockImplementation(
+      (_port: number, _host: string, callback: () => void) => {
+        callback();
+      }
+    );
+
+    // Reset browser mock with multiple pages
+    const mockPage1 = {
+      url: jest.fn().mockReturnValue('https://example.com/page1'),
+      title: jest.fn().mockResolvedValue('Page 1'),
+    };
+    const mockPage2 = {
+      url: jest.fn().mockReturnValue('https://example.com/page2'),
+      title: jest.fn().mockResolvedValue('Page 2'),
+    };
+
+    const mockContextWithPages = {
+      pages: jest.fn().mockReturnValue([mockPage1, mockPage2]),
+      newPage: jest.fn().mockResolvedValue(mockPage),
+    };
+
+    mockBrowser.contexts.mockReturnValue([mockContextWithPages]);
+    (chromium.connectOverCDP as jest.Mock).mockResolvedValue(mockBrowser);
+
+    // Import actions
+    const actionsModule = require('../../src/proxy-mcp/browser/cdp/actions');
+    listTabsViaCDP = actionsModule.listTabsViaCDP;
+
+    // Clear cached connection
+    const sessionModule = require('../../src/proxy-mcp/browser/cdp/session');
+    sessionModule.clearConnectionCache();
+  });
+
+  it('should list all open tabs successfully', async () => {
+    const result = await listTabsViaCDP();
+
+    expect(result.success).toBe(true);
+    expect(result.data?.totalTabs).toBe(2);
+    expect(result.data?.tabs).toHaveLength(2);
+    expect(result.data?.tabs[0].url).toBe('https://example.com/page1');
+    expect(result.data?.tabs[0].title).toBe('Page 1');
+    expect(result.data?.tabs[1].url).toBe('https://example.com/page2');
+    expect(result.data?.tabs[1].title).toBe('Page 2');
+  });
+
+  it('should handle connection errors', async () => {
+    mockSocketInstance.connect.mockImplementation(() => {});
+    mockSocketInstance.on.mockImplementation(
+      (event: string, callback: (err?: Error) => void) => {
+        if (event === 'error') {
+          setTimeout(() => callback(new Error('ECONNREFUSED')), 10);
+        }
+      }
+    );
+
+    const result = await listTabsViaCDP();
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Failed to list tabs');
+  });
+
+  it('should return empty array when no tabs open', async () => {
+    const emptyContext = {
+      pages: jest.fn().mockReturnValue([]),
+      newPage: jest.fn().mockResolvedValue(mockPage),
+    };
+    mockBrowser.contexts.mockReturnValue([emptyContext]);
+
+    const result = await listTabsViaCDP();
+
+    expect(result.success).toBe(true);
+    expect(result.data?.totalTabs).toBe(0);
+    expect(result.data?.tabs).toHaveLength(0);
   });
 });
 
