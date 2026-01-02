@@ -3,6 +3,10 @@
 このチェックリストの目的は、
 **無駄なスキル増殖を防ぎつつ、必要な時に確実に使えるスキルだけを増やす** ことです。
 
+> **重要**: スキルは `.claude/skills/` に配置し、Proxy の skill registry 経由で運用します。
+> Claude 側の MCP 露出は増やさず、`skill_search` / `skill_run` 経由でアクセスします。
+> 詳細: [26_PROXY_SINGLE_ENTRYPOINT.md](./26_PROXY_SINGLE_ENTRYPOINT.md)
+
 ## A. 追加前（重複チェック）
 - [ ] 既存スキルで代替できないか？
 - [ ] "名前が違うだけの同じスキル" を作ろうとしていないか？

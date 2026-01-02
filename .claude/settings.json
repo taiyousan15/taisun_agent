@@ -2,15 +2,15 @@
   "alwaysThinkingEnabled": true,
   "permissions": {
     "allow": [
-      "Bash(*)",
-      "Read(*)",
-      "Write(*)",
-      "Edit(*)",
-      "Glob(*)",
-      "Grep(*)",
-      "Task(*)",
-      "WebFetch(*)",
-      "WebSearch(*)"
+      "Bash",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "Task",
+      "WebFetch",
+      "WebSearch"
     ],
     "deny": []
   },

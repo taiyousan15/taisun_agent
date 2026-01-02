@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist/proxy-mcp",
+    "rootDir": "src/proxy-mcp",
+    "declaration": true,
+    "moduleResolution": "node"
+  },
+  "include": ["src/proxy-mcp/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

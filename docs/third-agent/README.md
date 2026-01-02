@@ -11,12 +11,15 @@
   新しいMCPサーバー/ツールを追加するときのチェックリスト
 - `11_CHECKLIST_ADD_SKILL.md`
   新しいスキルを追加するときのチェックリスト
+- `26_PROXY_SINGLE_ENTRYPOINT.md`
+  **Phase 4: Proxy 1本化設計** - Claude が接続する MCP は `taisun-proxy` のみ
 
 ## 最低限のルール（毎回これだけは守る）
 1. 作業開始前に **GitHub Issue** を作る（Issueテンプレを使う）
 2. **壊れない** が最優先。作業は小さく分け、必ず `npm test / lint / typecheck` を通す
 3. MCPツールはむやみにClaude側へ増やさない
    → **Proxy（受付）で隠し、必要なときだけ使う**（会話が重くならない）
+4. **通常は `.mcp.json` は proxy-only** を維持する（[26_PROXY_SINGLE_ENTRYPOINT.md](./26_PROXY_SINGLE_ENTRYPOINT.md) 参照）
 
 ## 関連
 - Issueテンプレ: `.github/ISSUE_TEMPLATE/agent-run-log.yml`
