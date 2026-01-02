@@ -37,7 +37,7 @@ jobs:
       version: ${{ steps.set-version.outputs.version }}
       is_rollback: ${{ steps.check-rollback.outputs.is_rollback }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -81,7 +81,7 @@ jobs:
     needs: prepare
     if: needs.prepare.outputs.is_rollback == 'false'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v4
         with:
@@ -257,7 +257,7 @@ jobs:
     needs: [prepare, deploy-production]
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
