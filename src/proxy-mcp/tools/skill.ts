@@ -3,6 +3,7 @@
  *
  * M2 Update: Added routing support for internal MCP selection
  * M4 Update: Added web skills (read_url, extract_links, capture_dom_map)
+ * M5 Update: Added skillize (URL→Skill generation)
  */
 
 import * as fs from 'fs';
@@ -11,6 +12,7 @@ import { SkillDefinition, ToolResult } from '../types';
 import { route, RouteResult } from '../router';
 import { getAllMcps, getRouterConfig } from '../internal/registry';
 import { readUrl, extractLinks, captureDomMap } from '../browser';
+import { skillize as skillizeCore, SkillizeOptions } from '../skillize';
 
 const SKILLS_DIR = path.join(process.cwd(), '.claude', 'skills');
 
@@ -103,6 +105,11 @@ export function skillRun(
       return runWebSkill(skillName, params);
     }
 
+    // M5: Handle skillize (async, return promise wrapper)
+    if (skillName === 'skillize') {
+      return runSkillize(params);
+    }
+
     // Mode: preview or execute - Load skill content from files
     const skillPath = path.join(SKILLS_DIR, skillName);
     const skillMdPath = path.join(skillPath, 'SKILL.md');
@@ -188,6 +195,49 @@ function runWebSkill(skillName: string, params?: Record<string, unknown>): ToolR
 }
 
 /**
+ * Run skillize (M5)
+ *
+ * Skillize is async but we return a sync wrapper.
+ */
+function runSkillize(params?: Record<string, unknown>): ToolResult {
+  const url = params?.url as string;
+
+  if (!url) {
+    return {
+      success: false,
+      error: 'URL is required for skillize. Use params.url to specify the target URL.',
+    };
+  }
+
+  // Validate URL
+  try {
+    new URL(url);
+  } catch {
+    return {
+      success: false,
+      error: `Invalid URL: ${url}`,
+    };
+  }
+
+  const confirmWrite = params?.confirmWrite === true;
+
+  return {
+    success: true,
+    data: {
+      skill: 'skillize',
+      url,
+      template: params?.template || 'auto',
+      confirmWrite,
+      status: 'ready',
+      message: confirmWrite
+        ? 'Skillize ready (WRITE mode). Use skillRunAsync() for execution.'
+        : 'Skillize ready (dry-run mode). Use skillRunAsync() for execution.',
+      asyncRequired: true,
+    },
+  };
+}
+
+/**
  * Run a web skill asynchronously (M4)
  *
  * This is the actual async execution of web skills.
@@ -258,16 +308,37 @@ export async function skillRunAsync(
         };
       }
 
+      // M5: Skillize
+      case 'skillize': {
+        const options: SkillizeOptions = {
+          template: params?.template as SkillizeOptions['template'],
+          name: params?.name as string,
+          confirmWrite: params?.confirmWrite === true,
+          namespace: (params?.namespace as 'short-term' | 'long-term') || 'long-term',
+        };
+        const result = await skillizeCore(url, options);
+        return {
+          success: result.success,
+          referenceId: result.refId,
+          data: {
+            template: result.template,
+            summary: result.summary,
+            ...result.data,
+          },
+          error: result.error,
+        };
+      }
+
       default:
         return {
           success: false,
-          error: `Unknown web skill: ${skillName}. Available: web.read_url, web.extract_links, web.capture_dom_map`,
+          error: `Unknown skill: ${skillName}. Available: web.read_url, web.extract_links, web.capture_dom_map, skillize`,
         };
     }
   } catch (error) {
     return {
       success: false,
-      error: `Web skill ${skillName} failed: ${error instanceof Error ? error.message : String(error)}`,
+      error: `Skill ${skillName} failed: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }

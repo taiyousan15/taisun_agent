@@ -156,7 +156,7 @@ describe('Chrome Integration', () => {
         const result = await skillRunAsync('web.unknown', { url: 'https://example.com' });
 
         expect(result.success).toBe(false);
-        expect(result.error).toContain('Unknown web skill');
+        expect(result.error).toContain('Unknown skill');
       });
 
       // Note: These tests verify web skills handle errors gracefully
