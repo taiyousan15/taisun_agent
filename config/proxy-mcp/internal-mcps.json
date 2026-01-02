@@ -1,154 +1,63 @@
 {
-  "$schema": "./internal-mcps.schema.json",
   "version": "1.0.0",
   "mcps": [
     {
       "name": "github",
       "transport": "stdio",
       "command": "npx",
-      "args": [
-        "-y",
-        "@anthropic/mcp-server-github"
-      ],
+      "args": ["-y", "@modelcontextprotocol/server-github@0.6.2"],
       "enabled": false,
-      "tags": [
-        "vcs",
-        "code",
-        "issues",
-        "pr",
-        "repository"
-      ],
-      "shortDescription": "GitHub operations: repos, issues, PRs, code search",
-      "dangerousOperations": [
-        "delete",
-        "force-push",
-        "archive"
-      ]
+      "versionPin": "0.6.2",
+      "requiredEnv": ["GITHUB_TOKEN"],
+      "tags": ["vcs", "issues", "pr", "repository", "git"],
+      "shortDescription": "GitHub issues, PRs, repository management",
+      "dangerousOperations": ["delete", "force-push", "archive", "admin"],
+      "allowlist": ["get_*", "list_*", "search_*", "create_issue", "create_pr", "add_comment"]
     },
     {
       "name": "notion",
       "transport": "stdio",
       "command": "npx",
-      "args": [
-        "-y",
-        "@anthropic/mcp-server-notion"
-      ],
+      "args": ["-y", "@modelcontextprotocol/server-notion@0.1.0"],
       "enabled": false,
-      "tags": [
-        "docs",
-        "wiki",
-        "database",
-        "notes"
-      ],
-      "shortDescription": "Notion pages and databases: read, create, update",
-      "dangerousOperations": [
-        "delete",
-        "archive"
-      ]
+      "versionPin": "0.1.0",
+      "requiredEnv": ["NOTION_API_KEY"],
+      "tags": ["docs", "wiki", "database", "knowledge"],
+      "shortDescription": "Notion pages, databases, and blocks",
+      "dangerousOperations": ["delete", "archive"],
+      "allowlist": ["get_*", "list_*", "search_*", "create_page", "append_block"]
     },
     {
       "name": "postgres",
       "transport": "stdio",
       "command": "npx",
-      "args": [
-        "-y",
-        "@anthropic/mcp-server-postgres"
-      ],
+      "args": ["-y", "@modelcontextprotocol/server-postgres@0.6.1"],
       "enabled": false,
-      "tags": [
-        "database",
-        "sql",
-        "query",
-        "data"
-      ],
-      "shortDescription": "PostgreSQL queries and schema operations",
-      "dangerousOperations": [
-        "drop",
-        "truncate",
-        "delete",
-        "alter"
-      ]
+      "versionPin": "0.6.1",
+      "requiredEnv": ["POSTGRES_DSN"],
+      "tags": ["database", "sql", "query", "analytics"],
+      "shortDescription": "PostgreSQL database queries and schema inspection",
+      "dangerousOperations": ["drop", "truncate", "delete", "alter", "insert", "update"],
+      "allowlist": ["query", "describe_table", "list_tables"]
     },
     {
       "name": "filesystem",
       "transport": "stdio",
       "command": "npx",
-      "args": [
-        "-y",
-        "@anthropic/mcp-server-filesystem"
-      ],
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@0.6.2", "."],
       "enabled": false,
-      "tags": [
-        "files",
-        "read",
-        "write",
-        "directory"
-      ],
-      "shortDescription": "Local filesystem: read, write, list files",
-      "dangerousOperations": [
-        "delete",
-        "overwrite"
-      ]
-    },
-    {
-      "name": "chrome",
-      "transport": "stdio",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@anthropic/mcp-server-puppeteer"
-      ],
-      "enabled": true,
-      "tags": [
-        "browser",
-        "web",
-        "automation",
-        "scrape",
-        "dom",
-        "url",
-        "links",
-        "page"
-      ],
-      "shortDescription": "Browser automation: navigate, click, extract DOM",
-      "dangerousOperations": [
-        "login",
-        "submit-form",
-        "payment",
-        "captcha-bypass",
-        "download-file"
-      ],
-      "captchaGuardrails": {
-        "detectPatterns": ["captcha", "recaptcha", "cloudflare", "verify you are human", "i'm not a robot"],
-        "action": "require_human",
-        "message": "CAPTCHA detected. Manual intervention required."
-      }
-    },
-    {
-      "name": "slack",
-      "transport": "stdio",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@anthropic/mcp-server-slack"
-      ],
-      "enabled": false,
-      "tags": [
-        "chat",
-        "messaging",
-        "notification",
-        "team"
-      ],
-      "shortDescription": "Slack: send messages, read channels, manage threads",
-      "dangerousOperations": [
-        "delete-message",
-        "archive-channel"
-      ]
+      "versionPin": "0.6.2",
+      "requiredEnv": [],
+      "tags": ["file", "directory", "local", "storage"],
+      "shortDescription": "Local filesystem read/write operations",
+      "dangerousOperations": ["delete", "write", "move"],
+      "allowlist": ["read_file", "list_directory", "get_file_info"]
     }
   ],
   "routerConfig": {
     "ruleFirst": true,
     "semanticThreshold": 0.7,
     "topK": 5,
-    "fallback": "require_human_or_clarify"
+    "fallback": "require_clarify"
   }
 }

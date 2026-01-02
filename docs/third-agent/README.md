@@ -11,8 +11,12 @@
   新しいMCPサーバー/ツールを追加するときのチェックリスト
 - `11_CHECKLIST_ADD_SKILL.md`
   新しいスキルを追加するときのチェックリスト
+- `12_CHECKLIST_ADD_INTERNAL_MCP.md`
+  **Phase 5: 内部MCP追加チェックリスト** - 安全な内部MCP追加手順
 - `26_PROXY_SINGLE_ENTRYPOINT.md`
   **Phase 4: Proxy 1本化設計** - Claude が接続する MCP は `taisun-proxy` のみ
+- `27_INTERNAL_MCP_ADD_STANDARD.md`
+  **Phase 5: 内部MCP追加標準** - 内部MCPの追加・管理・観測の標準手順
 
 ## 最低限のルール（毎回これだけは守る）
 1. 作業開始前に **GitHub Issue** を作る（Issueテンプレを使う）

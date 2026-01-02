@@ -47,9 +47,24 @@ export interface InternalMcpDefinition {
   args?: string[];
   endpoint?: string;
   enabled: boolean;
+  versionPin?: string;
+  requiredEnv?: string[];
   tags: string[];
   shortDescription: string;
   dangerousOperations: string[];
+  allowlist?: string[];
+}
+
+export interface LocalMcpOverride {
+  name: string;
+  enabled?: boolean;
+  versionPin?: string;
+  requiredEnv?: string[];
+  allowlist?: string[];
+}
+
+export interface LocalMcpsConfig {
+  mcps: LocalMcpOverride[];
 }
 
 export interface InternalMcpsConfig {

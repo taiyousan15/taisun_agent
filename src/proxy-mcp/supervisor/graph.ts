@@ -25,8 +25,9 @@ import {
 } from './github';
 import { route as routeToMcp } from '../router';
 import { getAllMcps, getRouterConfig } from '../internal/registry';
-import { memoryAdd } from '../tools/memory';
+import { memoryAdd, memorySearch } from '../tools/memory';
 import { MemoryNamespace } from '../memory/types';
+import { recordEvent, startTimer } from '../observability';
 
 /**
  * Generate unique run ID
@@ -35,6 +36,76 @@ function generateRunId(): string {
   const timestamp = Date.now().toString(36);
   const random = Math.random().toString(36).substring(2, 8);
   return `run-${timestamp}-${random}`;
+}
+
+/**
+ * State storage key prefix
+ */
+const STATE_KEY_PREFIX = 'supervisor-state-';
+
+/**
+ * Save supervisor state to memory for resume
+ */
+async function saveState(state: SupervisorState, namespace: MemoryNamespace = 'short-term'): Promise<string | undefined> {
+  try {
+    // Include state key as tag for searchability
+    const stateKey = `${STATE_KEY_PREFIX}${state.runId}`;
+    const result = await memoryAdd(
+      JSON.stringify(state),
+      namespace,
+      {
+        tags: ['supervisor', 'state', state.runId, state.step, stateKey],
+        source: 'supervisor',
+        metadata: { stateKey },
+      }
+    );
+
+    recordEvent('supervisor_step', state.runId, 'ok', {
+      metadata: { step: state.step, saved: true },
+    });
+
+    return result.referenceId;
+  } catch (error) {
+    console.error('[supervisor] Failed to save state:', error);
+    recordEvent('supervisor_step', state.runId, 'fail', {
+      errorType: 'state_save_failed',
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
+    return undefined;
+  }
+}
+
+/**
+ * Load supervisor state from memory
+ */
+async function loadState(runId: string): Promise<SupervisorState | null> {
+  try {
+    const stateKey = `${STATE_KEY_PREFIX}${runId}`;
+    const result = await memorySearch(stateKey, {
+      tags: ['supervisor', 'state', runId],
+      includeContent: true,
+      limit: 1,
+    });
+
+    // Type assertion for the data structure
+    const data = result.data as { found?: boolean; results?: Array<{ contentPreview?: string; summary?: string }> } | undefined;
+
+    if (!result.success || !data?.found || !data.results?.length) {
+      return null;
+    }
+
+    const entry = data.results[0];
+    const content = entry.contentPreview || entry.summary;
+
+    if (!content) {
+      return null;
+    }
+
+    return JSON.parse(content) as SupervisorState;
+  } catch (error) {
+    console.error('[supervisor] Failed to load state:', error);
+    return null;
+  }
 }
 
 /**
@@ -317,6 +388,11 @@ export async function runSupervisor(
   const maxSteps = options.maxSteps || 10;
   let stepCount = 0;
 
+  // Record start event
+  recordEvent('supervisor_step', state.runId, 'ok', {
+    metadata: { step: 'start', input: input.substring(0, 100) },
+  });
+
   try {
     while (stepCount < maxSteps) {
       stepCount++;
@@ -324,20 +400,29 @@ export async function runSupervisor(
       switch (state.step) {
         case 'ingest':
           state = await ingestStep(state);
+          await saveState(state, namespace);
           break;
 
         case 'route':
           state = await routeStep(state);
+          await saveState(state, namespace);
           break;
 
         case 'plan':
           state = await planStep(state);
+          await saveState(state, namespace);
           break;
 
         case 'approval':
           // If approval required and not yet approved, pause here
           if (state.requiresApproval && !state.approval?.approved) {
             state = await approvalStep(state);
+            // Save state for resume
+            await saveState(state, namespace);
+            // Record pause event
+            recordEvent('supervisor_pause', state.runId, 'ok', {
+              metadata: { approvalIssue: state.approval?.issueId },
+            });
             // Return paused state
             return {
               success: false,
@@ -355,14 +440,20 @@ export async function runSupervisor(
           }
           // If approved, move to execute
           state = { ...state, step: 'execute_safe' };
+          await saveState(state, namespace);
           break;
 
         case 'execute_safe':
           state = await executeSafeStep(state, namespace);
+          await saveState(state, namespace);
           break;
 
         case 'finalize':
           state = await finalizeStep(state);
+          // Record completion
+          recordEvent('supervisor_step', state.runId, 'ok', {
+            metadata: { step: 'finalize', success: state.result?.success },
+          });
           // Done
           return {
             success: state.result?.success || false,
@@ -379,6 +470,10 @@ export async function runSupervisor(
 
         case 'error':
           state = await errorStep(state);
+          recordEvent('supervisor_step', state.runId, 'fail', {
+            errorType: 'execution_error',
+            errorMessage: state.error,
+          });
           return {
             success: false,
             runId: state.runId,
@@ -392,6 +487,10 @@ export async function runSupervisor(
           };
 
         default:
+          recordEvent('supervisor_step', state.runId, 'fail', {
+            errorType: 'unknown_step',
+            errorMessage: `Unknown step: ${state.step}`,
+          });
           return {
             success: false,
             runId: state.runId,
@@ -403,6 +502,10 @@ export async function runSupervisor(
     }
 
     // Max steps reached
+    recordEvent('supervisor_step', state.runId, 'fail', {
+      errorType: 'max_steps',
+      errorMessage: `Max steps (${maxSteps}) reached`,
+    });
     return {
       success: false,
       runId: state.runId,
@@ -411,6 +514,10 @@ export async function runSupervisor(
       error: `Max steps (${maxSteps}) reached`,
     };
   } catch (err) {
+    recordEvent('supervisor_step', state.runId, 'fail', {
+      errorType: 'exception',
+      errorMessage: err instanceof Error ? err.message : String(err),
+    });
     return {
       success: false,
       runId: state.runId,
@@ -426,33 +533,161 @@ export async function runSupervisor(
  */
 export async function resumeSupervisor(
   runId: string,
-  approvalIssueId: number,
+  approvalIssueId?: number,
   options: SupervisorOptions = {}
 ): Promise<SupervisorResult> {
-  // Check approval status
-  const approvalStatus = await checkApproval(approvalIssueId);
+  const endTimer = startTimer('supervisor_resume', runId);
 
-  if (!approvalStatus.approved) {
+  // Load saved state
+  const savedState = await loadState(runId);
+
+  if (!savedState) {
+    endTimer('fail', { errorType: 'state_not_found' });
     return {
       success: false,
       runId,
-      step: 'approval',
-      summary: 'Still waiting for approval',
-      requiresApproval: true,
-      approvalIssue: approvalIssueId,
+      step: 'error',
+      requiresApproval: false,
+      error: `No saved state found for runId: ${runId}. State may have expired (TTL).`,
     };
   }
 
-  // Approval granted - continue execution
-  // Note: In a real implementation, we would restore the full state
+  // Get approval issue ID from saved state if not provided
+  const issueId = approvalIssueId || savedState.approval?.issueId;
+
+  // If we're in approval state, check approval status
+  if (savedState.step === 'approval' && issueId) {
+    const approvalStatus = await checkApproval(issueId);
+
+    if (!approvalStatus.approved) {
+      endTimer('ok');
+      return {
+        success: false,
+        runId,
+        step: 'approval',
+        summary: 'Still waiting for approval',
+        requiresApproval: true,
+        approvalIssue: issueId,
+        data: {
+          runlogIssue: savedState.runlogIssue,
+          timestamps: savedState.timestamps,
+        },
+      };
+    }
+
+    // Approval granted - update state and continue
+    recordEvent('supervisor_resume', runId, 'ok', {
+      metadata: { approvedBy: approvalStatus.approvedBy },
+    });
+
+    const approvedState: SupervisorState = {
+      ...savedState,
+      step: 'execute_safe',
+      approval: {
+        required: true,
+        approved: true,
+        issueId,
+        approvedBy: approvalStatus.approvedBy,
+        approvedAt: new Date().toISOString(),
+      },
+    };
+
+    // Save updated state
+    await saveState(approvedState, options.namespace || 'short-term');
+
+    // Continue execution from where we left off
+    const namespace: MemoryNamespace = options.namespace || 'short-term';
+    let state = approvedState;
+    const maxSteps = options.maxSteps || 10;
+    let stepCount = 0;
+
+    try {
+      while (stepCount < maxSteps) {
+        stepCount++;
+
+        switch (state.step) {
+          case 'execute_safe':
+            state = await executeSafeStep(state, namespace);
+            await saveState(state, namespace);
+            break;
+
+          case 'finalize':
+            state = await finalizeStep(state);
+            endTimer('ok');
+            return {
+              success: state.result?.success || false,
+              runId: state.runId,
+              step: state.step,
+              summary: state.result?.summary,
+              refId: state.result?.refId,
+              requiresApproval: false,
+              data: {
+                runlogIssue: state.runlogIssue,
+                timestamps: state.timestamps,
+                resumedFrom: 'approval',
+              },
+            };
+
+          case 'error':
+            state = await errorStep(state);
+            endTimer('fail', { errorType: 'execution_error' });
+            return {
+              success: false,
+              runId: state.runId,
+              step: state.step,
+              requiresApproval: false,
+              error: state.error,
+              data: {
+                runlogIssue: state.runlogIssue,
+                timestamps: state.timestamps,
+              },
+            };
+
+          default:
+            endTimer('fail', { errorType: 'unexpected_step' });
+            return {
+              success: false,
+              runId: state.runId,
+              step: 'error',
+              requiresApproval: false,
+              error: `Unexpected step during resume: ${state.step}`,
+            };
+        }
+      }
+
+      endTimer('fail', { errorType: 'max_steps' });
+      return {
+        success: false,
+        runId: state.runId,
+        step: 'error',
+        requiresApproval: false,
+        error: `Max steps (${maxSteps}) reached during resume`,
+      };
+    } catch (err) {
+      endTimer('fail', { errorType: 'exception' });
+      return {
+        success: false,
+        runId: state.runId,
+        step: 'error',
+        requiresApproval: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
+  // If not in approval state, just return the current state
+  endTimer('ok');
   return {
-    success: true,
+    success: savedState.step === 'finalize',
     runId,
-    step: 'execute_safe',
-    summary: `Approval granted by ${approvalStatus.approvedBy}. Execution can proceed.`,
-    requiresApproval: false,
+    step: savedState.step,
+    summary: savedState.result?.summary,
+    refId: savedState.result?.refId,
+    requiresApproval: savedState.requiresApproval,
+    approvalIssue: savedState.approval?.issueId,
     data: {
-      approvedBy: approvalStatus.approvedBy,
+      runlogIssue: savedState.runlogIssue,
+      timestamps: savedState.timestamps,
     },
   };
 }

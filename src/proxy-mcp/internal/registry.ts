@@ -4,11 +4,57 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { InternalMcpDefinition, InternalMcpsConfig, RouterConfig } from '../router/types';
+import { InternalMcpDefinition, InternalMcpsConfig, LocalMcpsConfig, RouterConfig } from '../router/types';
 
 const CONFIG_PATH = path.join(process.cwd(), 'config', 'proxy-mcp', 'internal-mcps.json');
+const LOCAL_CONFIG_PATH = path.join(process.cwd(), 'config', 'proxy-mcp', 'internal-mcps.local.json');
 
 let cachedConfig: InternalMcpsConfig | null = null;
+
+/**
+ * Load and merge local overrides into main config
+ */
+function mergeLocalOverrides(config: InternalMcpsConfig, localPath: string = LOCAL_CONFIG_PATH): InternalMcpsConfig {
+  try {
+    if (!fs.existsSync(localPath)) {
+      return config;
+    }
+
+    const localContent = fs.readFileSync(localPath, 'utf-8');
+    const localConfig = JSON.parse(localContent) as LocalMcpsConfig;
+
+    // Merge local overrides into main config
+    const mergedMcps = config.mcps.map((mcp) => {
+      const override = localConfig.mcps.find((o) => o.name === mcp.name);
+      if (!override) {
+        return mcp;
+      }
+
+      return {
+        ...mcp,
+        enabled: override.enabled ?? mcp.enabled,
+        versionPin: override.versionPin ?? mcp.versionPin,
+        requiredEnv: override.requiredEnv ?? mcp.requiredEnv,
+        allowlist: override.allowlist ?? mcp.allowlist,
+      };
+    });
+
+    // Add any MCPs that only exist in local config
+    for (const override of localConfig.mcps) {
+      if (!config.mcps.find((m) => m.name === override.name)) {
+        console.error(`[registry] Warning: local MCP "${override.name}" not found in main config, skipping`);
+      }
+    }
+
+    return {
+      ...config,
+      mcps: mergedMcps,
+    };
+  } catch (error) {
+    console.error('[registry] Failed to load local config:', error);
+    return config;
+  }
+}
 
 /**
  * Load internal MCPs config from file
@@ -34,10 +80,13 @@ export function loadConfig(configPath: string = CONFIG_PATH): InternalMcpsConfig
     }
 
     const content = fs.readFileSync(configPath, 'utf-8');
-    cachedConfig = JSON.parse(content) as InternalMcpsConfig;
+    const baseConfig = JSON.parse(content) as InternalMcpsConfig;
+
+    // Merge with local overrides
+    cachedConfig = mergeLocalOverrides(baseConfig);
     return cachedConfig;
   } catch (error) {
-    console.error('Failed to load internal MCPs config:', error);
+    console.error('[registry] Failed to load internal MCPs config:', error);
     return {
       version: '1.0.0',
       mcps: [],
