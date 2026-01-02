@@ -17,6 +17,7 @@ export type EventType =
   | 'supervisor_step'
   | 'memory_add'
   | 'memory_search'
+  | 'url_bundle_normalize'
   | 'error';
 
 /**

@@ -186,6 +186,39 @@ export async function memoryClearAll(): Promise<ToolResult> {
 }
 
 /**
+ * Get full content by ID (bypasses preview truncation)
+ *
+ * Use for large content like URL bundles that need full data.
+ */
+export async function memoryGetContent(id: string): Promise<ToolResult> {
+  try {
+    const service = getMemoryService();
+    const content = await service.getContent(id);
+
+    if (content === null) {
+      return {
+        success: false,
+        error: `Memory entry not found: ${id}`,
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        id,
+        content,
+        contentLength: content.length,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: `Failed to get memory content: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+/**
  * Delete a specific memory entry by ID
  */
 export async function memoryDelete(id: string): Promise<ToolResult> {

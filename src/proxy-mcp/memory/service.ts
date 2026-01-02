@@ -117,6 +117,17 @@ export class MemoryService {
   }
 
   /**
+   * Get full content by ID (bypasses preview truncation)
+   *
+   * Use for large content like URL bundles that need full data.
+   */
+  async getContent(id: string): Promise<string | null> {
+    const entry = await this.store.get(id);
+    if (!entry) return null;
+    return entry.content;
+  }
+
+  /**
    * Search memory
    */
   async search(

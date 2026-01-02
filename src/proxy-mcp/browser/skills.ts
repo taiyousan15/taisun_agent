@@ -5,6 +5,8 @@
  * - web.read_url: Read URL and summarize (full content to refId)
  * - web.extract_links: Extract page links (large lists to refId)
  * - web.capture_dom_map: Capture DOM structure (map to refId)
+ * - web.list_tabs_urls: List all open tab URLs via CDP
+ * - url.normalize_bundle: Normalize URL bundle (refId → refId)
  *
  * Backends:
  * - default: Uses chrome MCP (puppeteer)
@@ -24,6 +26,16 @@ import {
   captureDOMMapViaCDP,
   listTabsViaCDP,
 } from './cdp';
+import {
+  normalizeUrlBundle as normalizeUrlBundleCore,
+  getUrlBundleStats as getUrlBundleStatsCore,
+  UrlBundleConfig,
+} from './url-bundle';
+import {
+  batchSkillizeUrlBundle as batchSkillizeCore,
+  getBatchSkillizePreview as getBatchSkillizePreviewCore,
+  BatchSkillizeConfig,
+} from './url-bundle-skillize';
 
 /** Backend type for web skills */
 export type WebBackend = 'default' | 'cdp';
@@ -796,6 +808,232 @@ export async function listTabsUrls(
     return {
       success: false,
       error: `web.list_tabs_urls failed: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+}
+
+/**
+ * url.normalize_bundle - Normalize URL bundle
+ *
+ * Takes an input refId pointing to URL list in memory,
+ * normalizes (dedup, UTM removal, trailing slash), groups by domain,
+ * stores result in memory, returns summary + outputRefId.
+ *
+ * Input formats supported:
+ * - JSON array of URLs: ["url1", "url2"]
+ * - JSON array of objects: [{ url: "url1" }, { href: "url2" }]
+ * - JSON object with urls/tabs/links array
+ * - Newline-separated URLs
+ * - Comma-separated URLs
+ *
+ * @param inputRefId - Memory refId pointing to URL list
+ * @param options.maxUrls - Maximum URLs to process (default: 200)
+ * @param options.removeUtm - Remove UTM parameters (default: true)
+ * @param options.normalizeTrailingSlash - Normalize trailing slashes (default: true)
+ * @param options.groupByDomain - Group results by domain (default: true)
+ * @param options.namespace - Memory namespace for output (default: 'short-term')
+ */
+export async function normalizeUrlBundle(
+  inputRefId: string,
+  options?: Partial<UrlBundleConfig>
+): Promise<WebSkillResult> {
+  try {
+    const result = await normalizeUrlBundleCore(inputRefId, options);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error,
+      };
+    }
+
+    return {
+      success: true,
+      action: 'allow',
+      refId: result.outputRefId,
+      summary: result.summary,
+      data: {
+        inputRefId,
+        outputRefId: result.outputRefId,
+        inputCount: result.data?.inputCount,
+        outputCount: result.data?.outputCount,
+        duplicatesRemoved: result.data?.duplicatesRemoved,
+        removedCount: result.data?.removedCount,
+        domainGroups: result.data?.domainGroups,
+        message: `Use memory_search("${result.outputRefId}") for normalized URL list.`,
+      },
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: `url.normalize_bundle failed: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+}
+
+/**
+ * url.get_bundle_stats - Get URL bundle statistics
+ *
+ * Returns statistics about a URL bundle without processing.
+ * Useful for preview before normalization.
+ *
+ * @param inputRefId - Memory refId pointing to URL list
+ * @param options.namespace - Memory namespace (default: 'short-term')
+ */
+export async function getUrlBundleStats(
+  inputRefId: string,
+  options?: {
+    namespace?: MemoryNamespace;
+  }
+): Promise<WebSkillResult> {
+  try {
+    const result = await getUrlBundleStatsCore(inputRefId, options?.namespace);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error,
+      };
+    }
+
+    const stats = result.stats!;
+    const topDomainsStr = stats.topDomains
+      .slice(0, 5)
+      .map((d) => `  - ${d.domain}: ${d.count}`)
+      .join('\n');
+
+    const summary = `URL Bundle Stats:\n- Total URLs: ${stats.totalUrls}\n- Unique domains: ${stats.uniqueDomains}\nTop domains:\n${topDomainsStr}`;
+
+    return {
+      success: true,
+      action: 'allow',
+      summary,
+      data: {
+        inputRefId,
+        totalUrls: stats.totalUrls,
+        uniqueDomains: stats.uniqueDomains,
+        topDomains: stats.topDomains,
+      },
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: `url.get_bundle_stats failed: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+}
+
+/**
+ * url.batch_skillize - Batch skillize URL bundle
+ *
+ * Takes a normalized URL bundle (refId), runs skillize on each URL,
+ * stores results in memory, returns summary + outputRefId.
+ *
+ * IMPORTANT: dry-run by default (confirmWrite=false).
+ * Use confirmWrite=true only after preview/approval.
+ *
+ * @param inputRefId - Memory refId pointing to normalized URL bundle
+ * @param options.maxUrls - Maximum URLs to process (default: 50)
+ * @param options.rateLimitMs - Delay between URLs in ms (default: 1000)
+ * @param options.confirmWrite - Write to disk (default: false = dry-run)
+ * @param options.template - Force template type (auto-detect if not specified)
+ * @param options.namespace - Memory namespace (default: 'long-term')
+ * @param options.stopOnError - Stop on first error (default: false)
+ */
+export async function batchSkillizeUrlBundle(
+  inputRefId: string,
+  options?: Partial<BatchSkillizeConfig>
+): Promise<WebSkillResult> {
+  try {
+    const result = await batchSkillizeCore(inputRefId, options);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error,
+      };
+    }
+
+    return {
+      success: true,
+      action: 'allow',
+      refId: result.outputRefId,
+      summary: result.summary,
+      data: {
+        inputRefId,
+        outputRefId: result.outputRefId,
+        inputCount: result.data?.inputCount,
+        processedCount: result.data?.processedCount,
+        successCount: result.data?.successCount,
+        failureCount: result.data?.failureCount,
+        skippedCount: result.data?.skippedCount,
+        dryRun: result.data?.dryRun,
+        message: result.data?.dryRun
+          ? `Dry-run complete. Use confirmWrite=true to write. Use memory_search("${result.outputRefId}") for results.`
+          : `Skills written. Use memory_search("${result.outputRefId}") for results.`,
+      },
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: `url.batch_skillize failed: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+}
+
+/**
+ * url.batch_skillize_preview - Preview batch skillize
+ *
+ * Returns preview of what would be processed without running skillize.
+ * Use this before batchSkillizeUrlBundle to verify config.
+ *
+ * @param inputRefId - Memory refId pointing to normalized URL bundle
+ * @param options - Configuration to preview
+ */
+export async function batchSkillizePreview(
+  inputRefId: string,
+  options?: Partial<BatchSkillizeConfig>
+): Promise<WebSkillResult> {
+  try {
+    const result = await getBatchSkillizePreviewCore(inputRefId, options);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error,
+      };
+    }
+
+    const preview = result.preview!;
+    const domains = Object.entries(preview.domains)
+      .slice(0, 5)
+      .map(([domain, count]) => `  - ${domain}: ${count}`)
+      .join('\n');
+
+    const estimatedMinutes = Math.ceil(preview.estimatedTimeMs / 60000);
+
+    const summary = `Batch Skillize Preview:
+- URLs to process: ${preview.urlsToProcess}/${preview.totalUrls}
+- URLs to skip: ${preview.urlsToSkip}
+- Estimated time: ~${estimatedMinutes} minutes
+- Dry-run: ${!preview.config.confirmWrite}
+
+Domains:
+${domains}${Object.keys(preview.domains).length > 5 ? '\n  ...' : ''}`;
+
+    return {
+      success: true,
+      action: 'allow',
+      summary,
+      data: {
+        inputRefId,
+        ...preview,
+      },
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: `url.batch_skillize_preview failed: ${err instanceof Error ? err.message : String(err)}`,
     };
   }
 }
