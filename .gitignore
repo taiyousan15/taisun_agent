@@ -7,8 +7,11 @@ node_modules/
 .env.*.local
 .env.tools
 
-# Local MCP config (contains secrets/enabled status)
+# MCP overlay configs (contain secrets/enabled status)
 config/proxy-mcp/internal-mcps.local.json
+config/proxy-mcp/internal-mcps.staging.json
+config/proxy-mcp/internal-mcps.prod.json
+config/proxy-mcp/observability-report.json
 
 # Build outputs
 dist/

@@ -40,7 +40,12 @@
     "postinstall": "npm run proxy:build",
     "proxy:start": "npx ts-node src/proxy-mcp/server.ts",
     "proxy:build": "tsc --project tsconfig.proxy.json",
-    "proxy:smoke": "node scripts/proxy-smoke.js"
+    "proxy:smoke": "node scripts/proxy-smoke.js",
+    "internal-mcp:rollout": "node dist/proxy-mcp/internal/rollout-cli.js",
+    "obs:report:daily": "node dist/proxy-mcp/observability/report-cli.js --period 24h",
+    "obs:report:weekly": "node dist/proxy-mcp/observability/report-cli.js --period 7d",
+    "obs:post:daily": "node dist/proxy-mcp/observability/report-cli.js --period 24h --post",
+    "obs:post:weekly": "node dist/proxy-mcp/observability/report-cli.js --period 7d --post"
   },
   "keywords": [
     "ai",

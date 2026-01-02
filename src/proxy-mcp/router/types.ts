@@ -40,6 +40,28 @@ export interface RouterConfig {
   fallback: RouteAction;
 }
 
+/**
+ * Resilience configuration for internal MCPs
+ */
+export interface McpResilienceConfig {
+  timeout?: {
+    spawnMs?: number;
+    toolCallMs?: number;
+  };
+  retry?: {
+    maxAttempts?: number;
+    backoffMs?: number;
+    jitter?: boolean;
+  };
+  circuit?: {
+    enabled?: boolean;
+    failureThreshold?: number;
+    cooldownMs?: number;
+    halfOpenMaxCalls?: number;
+    successThreshold?: number;
+  };
+}
+
 export interface InternalMcpDefinition {
   name: string;
   transport: 'stdio' | 'sse' | 'http';
@@ -53,6 +75,7 @@ export interface InternalMcpDefinition {
   shortDescription: string;
   dangerousOperations: string[];
   allowlist?: string[];
+  resilience?: McpResilienceConfig;
 }
 
 export interface LocalMcpOverride {

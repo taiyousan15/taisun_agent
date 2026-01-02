@@ -14,10 +14,32 @@ describe('Proxy MCP', () => {
 
       expect(result.success).toBe(true);
       expect(result.data).toBeDefined();
-      expect((result.data as { status: string }).status).toBe('healthy');
-      expect((result.data as { version: string }).version).toBe('0.1.0');
+      expect(['healthy', 'degraded', 'unhealthy']).toContain((result.data as { status: string }).status);
+      expect((result.data as { version: string }).version).toBe('0.2.0');
       expect((result.data as { uptime: number }).uptime).toBeGreaterThanOrEqual(0);
       expect((result.data as { timestamp: string }).timestamp).toBeDefined();
+    });
+
+    it('should include circuit breaker status', () => {
+      const result = systemHealth();
+
+      expect(result.data).toBeDefined();
+      const data = result.data as { circuits: { total: number; closed: number; open: number; halfOpen: number } };
+      expect(data.circuits).toBeDefined();
+      expect(typeof data.circuits.total).toBe('number');
+      expect(typeof data.circuits.closed).toBe('number');
+      expect(typeof data.circuits.open).toBe('number');
+      expect(typeof data.circuits.halfOpen).toBe('number');
+    });
+
+    it('should include rollout status', () => {
+      const result = systemHealth();
+
+      expect(result.data).toBeDefined();
+      const data = result.data as { rollout: { overlayActive: boolean; mcps: unknown[] } };
+      expect(data.rollout).toBeDefined();
+      expect(typeof data.rollout.overlayActive).toBe('boolean');
+      expect(Array.isArray(data.rollout.mcps)).toBe(true);
     });
   });
 

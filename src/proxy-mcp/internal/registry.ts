@@ -1,63 +1,23 @@
 /**
  * Internal MCP Registry - Manages internal MCP definitions
+ *
+ * P6 Update: Uses overlay system for production enablement
+ * Priority: overlay > local > base
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { InternalMcpDefinition, InternalMcpsConfig, LocalMcpsConfig, RouterConfig } from '../router/types';
+import { InternalMcpDefinition, InternalMcpsConfig, RouterConfig } from '../router/types';
+import { loadMergedConfig, loadBaseConfig, getRolloutConfig, RolloutConfig } from './overlay';
+import { isRolloutEnabled, formatRolloutStatus } from './rollout';
 
 const CONFIG_PATH = path.join(process.cwd(), 'config', 'proxy-mcp', 'internal-mcps.json');
-const LOCAL_CONFIG_PATH = path.join(process.cwd(), 'config', 'proxy-mcp', 'internal-mcps.local.json');
 
 let cachedConfig: InternalMcpsConfig | null = null;
+let cachedMcps: InternalMcpDefinition[] | null = null;
 
 /**
- * Load and merge local overrides into main config
- */
-function mergeLocalOverrides(config: InternalMcpsConfig, localPath: string = LOCAL_CONFIG_PATH): InternalMcpsConfig {
-  try {
-    if (!fs.existsSync(localPath)) {
-      return config;
-    }
-
-    const localContent = fs.readFileSync(localPath, 'utf-8');
-    const localConfig = JSON.parse(localContent) as LocalMcpsConfig;
-
-    // Merge local overrides into main config
-    const mergedMcps = config.mcps.map((mcp) => {
-      const override = localConfig.mcps.find((o) => o.name === mcp.name);
-      if (!override) {
-        return mcp;
-      }
-
-      return {
-        ...mcp,
-        enabled: override.enabled ?? mcp.enabled,
-        versionPin: override.versionPin ?? mcp.versionPin,
-        requiredEnv: override.requiredEnv ?? mcp.requiredEnv,
-        allowlist: override.allowlist ?? mcp.allowlist,
-      };
-    });
-
-    // Add any MCPs that only exist in local config
-    for (const override of localConfig.mcps) {
-      if (!config.mcps.find((m) => m.name === override.name)) {
-        console.error(`[registry] Warning: local MCP "${override.name}" not found in main config, skipping`);
-      }
-    }
-
-    return {
-      ...config,
-      mcps: mergedMcps,
-    };
-  } catch (error) {
-    console.error('[registry] Failed to load local config:', error);
-    return config;
-  }
-}
-
-/**
- * Load internal MCPs config from file
+ * Load internal MCPs config from file (uses overlay system)
  */
 export function loadConfig(configPath: string = CONFIG_PATH): InternalMcpsConfig {
   if (cachedConfig) {
@@ -65,25 +25,16 @@ export function loadConfig(configPath: string = CONFIG_PATH): InternalMcpsConfig
   }
 
   try {
-    if (!fs.existsSync(configPath)) {
-      // Return default empty config if file doesn't exist
-      return {
-        version: '1.0.0',
-        mcps: [],
-        routerConfig: {
-          ruleFirst: true,
-          semanticThreshold: 0.7,
-          topK: 5,
-          fallback: 'require_clarify',
-        },
-      };
-    }
+    // Use overlay system for merged configuration
+    const baseConfig = loadBaseConfig();
+    const mergedMcps = loadMergedConfig();
 
-    const content = fs.readFileSync(configPath, 'utf-8');
-    const baseConfig = JSON.parse(content) as InternalMcpsConfig;
+    cachedConfig = {
+      ...baseConfig,
+      mcps: mergedMcps,
+    };
+    cachedMcps = mergedMcps;
 
-    // Merge with local overrides
-    cachedConfig = mergeLocalOverrides(baseConfig);
     return cachedConfig;
   } catch (error) {
     console.error('[registry] Failed to load internal MCPs config:', error);
@@ -105,6 +56,7 @@ export function loadConfig(configPath: string = CONFIG_PATH): InternalMcpsConfig
  */
 export function clearCache(): void {
   cachedConfig = null;
+  cachedMcps = null;
 }
 
 /**
@@ -165,7 +117,87 @@ export function getMcpSummary(): string {
   const lines = ['Available internal MCPs:'];
   for (const mcp of mcps) {
     const status = mcp.enabled ? 'enabled' : 'disabled';
-    lines.push(`  - ${mcp.name} [${status}]: ${mcp.shortDescription}`);
+    const rollout = formatRolloutStatus(mcp.name);
+    lines.push(`  - ${mcp.name} [${status}] (${rollout}): ${mcp.shortDescription}`);
   }
   return lines.join('\n');
+}
+
+/**
+ * Check if an MCP is enabled for a specific runId (considers rollout)
+ */
+export function isMcpEnabledForRun(name: string, runId: string): boolean {
+  const mcp = getMcpByName(name);
+  if (!mcp?.enabled) {
+    return false;
+  }
+
+  // Check rollout status
+  return isRolloutEnabled(name, runId);
+}
+
+/**
+ * Get rollout status for all MCPs
+ */
+export function getRolloutStatus(): Array<{
+  name: string;
+  enabled: boolean;
+  rollout: string;
+  rolloutConfig: RolloutConfig | null;
+}> {
+  const mcps = getAllMcps();
+  return mcps.map((mcp) => ({
+    name: mcp.name,
+    enabled: mcp.enabled,
+    rollout: formatRolloutStatus(mcp.name),
+    rolloutConfig: getRolloutConfig(mcp.name),
+  }));
+}
+
+/**
+ * Get rollout summary for system_health
+ */
+export function getRolloutSummary(): {
+  total: number;
+  enabled: number;
+  canary: number;
+  full: number;
+  off: number;
+  overlayActive: boolean;
+  mcps: Array<{ name: string; mode: 'off' | 'canary' | 'full'; canaryPercent?: number }>;
+} {
+  const mcps = getAllMcps();
+  let enabled = 0;
+  let canary = 0;
+  let full = 0;
+  let off = 0;
+
+  const mcpStatuses: Array<{ name: string; mode: 'off' | 'canary' | 'full'; canaryPercent?: number }> = [];
+
+  // Check if overlay is active
+  const overlayPath = process.env.TAISUN_INTERNAL_MCPS_OVERLAY_PATH;
+  const overlayActive = !!overlayPath;
+
+  for (const mcp of mcps) {
+    if (!mcp.enabled) {
+      off++;
+      mcpStatuses.push({ name: mcp.name, mode: 'off' });
+      continue;
+    }
+    enabled++;
+
+    const rollout = getRolloutConfig(mcp.name);
+    if (!rollout || rollout.mode === 'full') {
+      full++;
+      mcpStatuses.push({ name: mcp.name, mode: 'full' });
+    } else if (rollout.mode === 'canary') {
+      canary++;
+      mcpStatuses.push({ name: mcp.name, mode: 'canary', canaryPercent: rollout.canaryPercent });
+    } else {
+      off++;
+      mcpStatuses.push({ name: mcp.name, mode: 'off' });
+    }
+  }
+
+  return { total: mcps.length, enabled, canary, full, off, overlayActive, mcps: mcpStatuses };
 }

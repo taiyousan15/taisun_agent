@@ -20,3 +20,14 @@ export type {
   MetricsSummary,
   EventFilter,
 } from './types';
+
+export {
+  generateReport,
+  formatReportMarkdown,
+  getLast24hPeriod,
+  getLast7dPeriod,
+} from './report';
+
+export type { ReportData, ReportPeriod, McpMetrics } from './report';
+
+export { postReportToIssue, createReportIssue } from './post-to-issue';
