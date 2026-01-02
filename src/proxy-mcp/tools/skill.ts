@@ -2,6 +2,7 @@
  * Skill Tools - Search and run skills from .claude/skills
  *
  * M2 Update: Added routing support for internal MCP selection
+ * M4 Update: Added web skills (read_url, extract_links, capture_dom_map)
  */
 
 import * as fs from 'fs';
@@ -9,6 +10,7 @@ import * as path from 'path';
 import { SkillDefinition, ToolResult } from '../types';
 import { route, RouteResult } from '../router';
 import { getAllMcps, getRouterConfig } from '../internal/registry';
+import { readUrl, extractLinks, captureDomMap } from '../browser';
 
 const SKILLS_DIR = path.join(process.cwd(), '.claude', 'skills');
 
@@ -77,10 +79,12 @@ export function skillSearch(query: string): ToolResult {
 /**
  * Run a skill by name
  *
- * @param skillName - Name of the skill to run
+ * @param skillName - Name of the skill to run (or web.read_url, web.extract_links, web.capture_dom_map)
  * @param params - Optional parameters
  * @param params.mode - 'preview' (default), 'route', or 'execute'
  * @param params.input - Input for routing (used when mode='route')
+ * @param params.url - URL for web skills
+ * @param params.namespace - Memory namespace for web skills
  */
 export function skillRun(
   skillName: string,
@@ -94,7 +98,12 @@ export function skillRun(
       return skillRoute(params?.input as string);
     }
 
-    // Mode: preview or execute - Load skill content
+    // M4: Handle web skills (async, return promise wrapper)
+    if (skillName.startsWith('web.')) {
+      return runWebSkill(skillName, params);
+    }
+
+    // Mode: preview or execute - Load skill content from files
     const skillPath = path.join(SKILLS_DIR, skillName);
     const skillMdPath = path.join(skillPath, 'SKILL.md');
 
@@ -134,6 +143,131 @@ export function skillRun(
     return {
       success: false,
       error: `Failed to run skill: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+/**
+ * Run a web skill (M4)
+ *
+ * Web skills are async but we return a sync wrapper that
+ * indicates the skill needs to be awaited.
+ */
+function runWebSkill(skillName: string, params?: Record<string, unknown>): ToolResult {
+  const url = params?.url as string;
+
+  if (!url) {
+    return {
+      success: false,
+      error: `URL is required for ${skillName}. Use params.url to specify the target URL.`,
+    };
+  }
+
+  // Validate URL
+  try {
+    new URL(url);
+  } catch {
+    return {
+      success: false,
+      error: `Invalid URL: ${url}`,
+    };
+  }
+
+  // Return info about how to execute (sync wrapper for async skill)
+  // The actual execution happens via skillRunAsync
+  return {
+    success: true,
+    data: {
+      skill: skillName,
+      url,
+      status: 'ready',
+      message: `Web skill ${skillName} is ready. Use skillRunAsync() for actual execution.`,
+      asyncRequired: true,
+    },
+  };
+}
+
+/**
+ * Run a web skill asynchronously (M4)
+ *
+ * This is the actual async execution of web skills.
+ * Returns summary + refId following minimal output principle.
+ */
+export async function skillRunAsync(
+  skillName: string,
+  params?: Record<string, unknown>
+): Promise<ToolResult> {
+  const url = params?.url as string;
+
+  if (!url) {
+    return {
+      success: false,
+      error: `URL is required for ${skillName}`,
+    };
+  }
+
+  try {
+    switch (skillName) {
+      case 'web.read_url': {
+        const result = await readUrl(url, {
+          namespace: (params?.namespace as 'short-term' | 'long-term') || 'short-term',
+          maxLength: (params?.maxLength as number) || 50000,
+        });
+        return {
+          success: result.success,
+          referenceId: result.refId,
+          data: {
+            action: result.action,
+            summary: result.summary,
+            ...result.data,
+          },
+          error: result.error,
+        };
+      }
+
+      case 'web.extract_links': {
+        const result = await extractLinks(url, {
+          namespace: (params?.namespace as 'short-term' | 'long-term') || 'short-term',
+          filter: (params?.filter as 'internal' | 'external' | 'all') || 'all',
+        });
+        return {
+          success: result.success,
+          referenceId: result.refId,
+          data: {
+            action: result.action,
+            summary: result.summary,
+            ...result.data,
+          },
+          error: result.error,
+        };
+      }
+
+      case 'web.capture_dom_map': {
+        const result = await captureDomMap(url, {
+          namespace: (params?.namespace as 'short-term' | 'long-term') || 'short-term',
+        });
+        return {
+          success: result.success,
+          referenceId: result.refId,
+          data: {
+            action: result.action,
+            summary: result.summary,
+            ...result.data,
+          },
+          error: result.error,
+        };
+      }
+
+      default:
+        return {
+          success: false,
+          error: `Unknown web skill: ${skillName}. Available: web.read_url, web.extract_links, web.capture_dom_map`,
+        };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: `Web skill ${skillName} failed: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }

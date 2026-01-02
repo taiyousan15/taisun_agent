@@ -98,20 +98,30 @@
         "-y",
         "@anthropic/mcp-server-puppeteer"
       ],
-      "enabled": false,
+      "enabled": true,
       "tags": [
         "browser",
         "web",
         "automation",
         "scrape",
-        "dom"
+        "dom",
+        "url",
+        "links",
+        "page"
       ],
       "shortDescription": "Browser automation: navigate, click, extract DOM",
       "dangerousOperations": [
         "login",
         "submit-form",
-        "payment"
-      ]
+        "payment",
+        "captcha-bypass",
+        "download-file"
+      ],
+      "captchaGuardrails": {
+        "detectPatterns": ["captcha", "recaptcha", "cloudflare", "verify you are human", "i'm not a robot"],
+        "action": "require_human",
+        "message": "CAPTCHA detected. Manual intervention required."
+      }
     },
     {
       "name": "slack",

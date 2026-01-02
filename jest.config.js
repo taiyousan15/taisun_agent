@@ -11,6 +11,8 @@ module.exports = {
     '!src/**/BenchmarkRunner.ts', // benchmarking utility
     '!src/proxy-mcp/server.ts',   // MCP server entry point (requires stdio)
     '!src/proxy-mcp/internal/normalize.ts', // future embedding utilities
+    '!src/proxy-mcp/browser/skills.ts',     // requires chrome MCP (M4 integration)
+    '!src/proxy-mcp/internal/mcp-client.ts', // requires external MCP servers
   ],
   testPathIgnorePatterns: ['/node_modules/'],
   // Transform TypeScript files
