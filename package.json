@@ -16,6 +16,7 @@
     "test:performance": "jest --selectProjects integration --testPathPattern=performance.integration",
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
+    "check:unicode": "node scripts/check-hidden-unicode.js",
     "lint": "eslint src/ tests/",
     "lint:fix": "eslint src/ tests/ --fix",
     "typecheck": "tsc --noEmit",
