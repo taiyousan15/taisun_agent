@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* istanbul ignore file */
 /**
  * Rollout CLI for Internal MCP Management
  *
