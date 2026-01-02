@@ -1,10 +1,14 @@
 /**
- * Web Skills - Browser automation skills for M4
+ * Web Skills - Browser automation skills for M4/P7
  *
  * Skills:
  * - web.read_url: Read URL and summarize (full content to refId)
  * - web.extract_links: Extract page links (large lists to refId)
  * - web.capture_dom_map: Capture DOM structure (map to refId)
+ *
+ * Backends:
+ * - default: Uses chrome MCP (puppeteer)
+ * - cdp: Uses Playwright CDP to connect to existing Chrome (P7)
  *
  * All output follows minimal output principle: summary + refId
  */
@@ -14,16 +18,30 @@ import { guardCaptcha, checkBlockedPatterns } from './captcha';
 import { getClient } from '../internal/mcp-client';
 import { memoryAdd } from '../tools/memory';
 import { MemoryNamespace } from '../memory/types';
+import {
+  readUrlViaCDP,
+  extractLinksViaCDP,
+  captureDOMMapViaCDP,
+} from './cdp';
+
+/** Backend type for web skills */
+export type WebBackend = 'default' | 'cdp';
 
 /**
  * web.read_url - Read URL and summarize
  *
  * Opens URL, extracts text content, checks for CAPTCHA,
  * stores full content in memory, returns summary + refId
+ *
+ * @param url - URL to read
+ * @param options.backend - 'default' (puppeteer) or 'cdp' (Playwright CDP)
+ * @param options.namespace - Memory namespace for storage
+ * @param options.maxLength - Max content length
  */
 export async function readUrl(
   url: string,
   options?: {
+    backend?: WebBackend;
     namespace?: MemoryNamespace;
     maxLength?: number;
   }
@@ -32,11 +50,17 @@ export async function readUrl(
   const blocked = checkBlockedPatterns(url);
   if (blocked) return blocked;
 
+  const backend = options?.backend || 'default';
   const namespace = options?.namespace || 'short-term';
   const maxLength = options?.maxLength || 50000;
 
+  // Use CDP backend if specified
+  if (backend === 'cdp') {
+    return readUrlViaCDPWithMemory(url, namespace, maxLength);
+  }
+
   try {
-    // Try to use chrome MCP
+    // Try to use chrome MCP (default backend)
     const client = getClient('chrome');
     if (!client || !client.isAvailable()) {
       return {
@@ -143,10 +167,16 @@ export async function readUrl(
  *
  * Extracts all links from page, stores full list in memory,
  * returns summary with link count + refId
+ *
+ * @param url - URL to extract links from
+ * @param options.backend - 'default' (puppeteer) or 'cdp' (Playwright CDP)
+ * @param options.namespace - Memory namespace for storage
+ * @param options.filter - 'internal', 'external', or 'all'
  */
 export async function extractLinks(
   url: string,
   options?: {
+    backend?: WebBackend;
     namespace?: MemoryNamespace;
     filter?: 'internal' | 'external' | 'all';
   }
@@ -154,8 +184,14 @@ export async function extractLinks(
   const blocked = checkBlockedPatterns(url);
   if (blocked) return blocked;
 
+  const backend = options?.backend || 'default';
   const namespace = options?.namespace || 'short-term';
   const filter = options?.filter || 'all';
+
+  // Use CDP backend if specified
+  if (backend === 'cdp') {
+    return extractLinksViaCDPWithMemory(url, namespace, filter);
+  }
 
   try {
     const client = getClient('chrome');
@@ -274,17 +310,28 @@ export async function extractLinks(
  *
  * Analyzes page DOM structure, identifies major components,
  * stores full map in memory, returns summary + refId
+ *
+ * @param url - URL to capture DOM from
+ * @param options.backend - 'default' (puppeteer) or 'cdp' (Playwright CDP)
+ * @param options.namespace - Memory namespace for storage
  */
 export async function captureDomMap(
   url: string,
   options?: {
+    backend?: WebBackend;
     namespace?: MemoryNamespace;
   }
 ): Promise<WebSkillResult> {
   const blocked = checkBlockedPatterns(url);
   if (blocked) return blocked;
 
+  const backend = options?.backend || 'default';
   const namespace = options?.namespace || 'short-term';
+
+  // Use CDP backend if specified
+  if (backend === 'cdp') {
+    return captureDomMapViaCDPWithMemory(url, namespace);
+  }
 
   try {
     const client = getClient('chrome');
@@ -413,4 +460,257 @@ function generateSummary(title: string, content: string, url: string): string {
   const hostname = new URL(url).hostname;
   const preview = content.slice(0, 300).replace(/\s+/g, ' ').trim();
   return `${title} (${hostname})\n\n${preview}${content.length > 300 ? '...' : ''}`;
+}
+
+// ============================================
+// CDP Backend Helper Functions
+// ============================================
+
+/**
+ * Read URL via CDP with memory storage
+ */
+async function readUrlViaCDPWithMemory(
+  url: string,
+  namespace: MemoryNamespace,
+  maxLength: number
+): Promise<WebSkillResult> {
+  const result = await readUrlViaCDP(url);
+
+  if (!result.success) {
+    if (result.requireHuman) {
+      return {
+        success: false,
+        action: 'require_human',
+        error: result.error,
+        data: {
+          reason: result.humanReason,
+          instruction: 'Please resolve CAPTCHA/login in Chrome, then retry.',
+        },
+      };
+    }
+    return {
+      success: false,
+      error: result.error,
+    };
+  }
+
+  const pageData = result.data!;
+  const content = pageData.content.substring(0, maxLength);
+
+  // Store full content in memory
+  const memResult = await memoryAdd(
+    JSON.stringify({
+      url: pageData.url,
+      title: pageData.title,
+      content,
+      fetchedAt: new Date().toISOString(),
+      backend: 'cdp',
+    }),
+    namespace,
+    {
+      tags: ['web', 'page-content', new URL(url).hostname, 'cdp'],
+      source: 'web.read_url',
+    }
+  );
+
+  if (!memResult.success) {
+    return {
+      success: false,
+      error: `Failed to store content: ${memResult.error}`,
+    };
+  }
+
+  const summary = generateSummary(pageData.title, content, pageData.url);
+
+  return {
+    success: true,
+    action: 'allow',
+    refId: memResult.referenceId,
+    summary,
+    data: {
+      url: pageData.url,
+      title: pageData.title,
+      contentLength: content.length,
+      backend: 'cdp',
+      message: `Page loaded via CDP. Use memory_search("${memResult.referenceId}") for full content.`,
+    },
+  };
+}
+
+/**
+ * Extract links via CDP with memory storage
+ */
+async function extractLinksViaCDPWithMemory(
+  url: string,
+  namespace: MemoryNamespace,
+  filter: 'internal' | 'external' | 'all'
+): Promise<WebSkillResult> {
+  const result = await extractLinksViaCDP(url);
+
+  if (!result.success) {
+    if (result.requireHuman) {
+      return {
+        success: false,
+        action: 'require_human',
+        error: result.error,
+        data: {
+          reason: result.humanReason,
+          instruction: 'Please resolve CAPTCHA/login in Chrome, then retry.',
+        },
+      };
+    }
+    return {
+      success: false,
+      error: result.error,
+    };
+  }
+
+  const linkData = result.data!;
+
+  // Filter links
+  const baseHost = new URL(url).hostname;
+  let filteredLinks = linkData.links;
+  if (filter === 'internal') {
+    filteredLinks = linkData.links.filter((l) => {
+      try {
+        return new URL(l.href).hostname === baseHost;
+      } catch {
+        return false;
+      }
+    });
+  } else if (filter === 'external') {
+    filteredLinks = linkData.links.filter((l) => {
+      try {
+        return new URL(l.href).hostname !== baseHost;
+      } catch {
+        return false;
+      }
+    });
+  }
+
+  // Store full link list in memory
+  const memResult = await memoryAdd(
+    JSON.stringify({
+      url: linkData.url,
+      filter,
+      links: filteredLinks,
+      extractedAt: new Date().toISOString(),
+      backend: 'cdp',
+    }),
+    namespace,
+    {
+      tags: ['web', 'links', baseHost, 'cdp'],
+      source: 'web.extract_links',
+    }
+  );
+
+  if (!memResult.success) {
+    return {
+      success: false,
+      error: `Failed to store links: ${memResult.error}`,
+    };
+  }
+
+  // Summary with top 5 links
+  const topLinks = filteredLinks.slice(0, 5).map((l) => `- ${l.text || l.href}`);
+  const summary = `Extracted ${filteredLinks.length} ${filter} links from ${baseHost} (CDP).\nTop links:\n${topLinks.join('\n')}${filteredLinks.length > 5 ? '\n...' : ''}`;
+
+  return {
+    success: true,
+    action: 'allow',
+    refId: memResult.referenceId,
+    summary,
+    data: {
+      url: linkData.url,
+      linkCount: filteredLinks.length,
+      filter,
+      backend: 'cdp',
+      message: `Use memory_search("${memResult.referenceId}") for full link list.`,
+    },
+  };
+}
+
+/**
+ * Capture DOM map via CDP with memory storage
+ */
+async function captureDomMapViaCDPWithMemory(
+  url: string,
+  namespace: MemoryNamespace
+): Promise<WebSkillResult> {
+  const result = await captureDOMMapViaCDP(url);
+
+  if (!result.success) {
+    if (result.requireHuman) {
+      return {
+        success: false,
+        action: 'require_human',
+        error: result.error,
+        data: {
+          reason: result.humanReason,
+          instruction: 'Please resolve CAPTCHA/login in Chrome, then retry.',
+        },
+      };
+    }
+    return {
+      success: false,
+      error: result.error,
+    };
+  }
+
+  const domData = result.data!;
+
+  // Store DOM map in memory
+  const memResult = await memoryAdd(
+    JSON.stringify({
+      url: domData.url,
+      title: domData.title,
+      elements: domData.elements,
+      totalElements: domData.totalElements,
+      capturedAt: new Date().toISOString(),
+      backend: 'cdp',
+    }),
+    namespace,
+    {
+      tags: ['web', 'dom-map', new URL(url).hostname, 'cdp'],
+      source: 'web.capture_dom_map',
+    }
+  );
+
+  if (!memResult.success) {
+    return {
+      success: false,
+      error: `Failed to store DOM map: ${memResult.error}`,
+    };
+  }
+
+  // Build summary from elements
+  const tagCounts: Record<string, number> = {};
+  const countTags = (elements: Array<{ tag: string; children?: unknown[] }>): void => {
+    for (const el of elements) {
+      tagCounts[el.tag] = (tagCounts[el.tag] || 0) + 1;
+      if (el.children && Array.isArray(el.children)) {
+        countTags(el.children as Array<{ tag: string; children?: unknown[] }>);
+      }
+    }
+  };
+  countTags(domData.elements);
+
+  const summary = `DOM map for ${domData.title || url} (CDP):\n${Object.entries(tagCounts)
+    .slice(0, 10)
+    .map(([tag, count]) => `- ${tag}: ${count}`)
+    .join('\n')}${Object.keys(tagCounts).length > 10 ? '\n...' : ''}`;
+
+  return {
+    success: true,
+    action: 'allow',
+    refId: memResult.referenceId,
+    summary,
+    data: {
+      url: domData.url,
+      title: domData.title,
+      totalElements: domData.totalElements,
+      backend: 'cdp',
+      message: `Use memory_search("${memResult.referenceId}") for full DOM map.`,
+    },
+  };
 }

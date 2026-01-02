@@ -45,7 +45,9 @@
     "obs:report:daily": "node dist/proxy-mcp/observability/report-cli.js --period 24h",
     "obs:report:weekly": "node dist/proxy-mcp/observability/report-cli.js --period 7d",
     "obs:post:daily": "node dist/proxy-mcp/observability/report-cli.js --period 24h --post",
-    "obs:post:weekly": "node dist/proxy-mcp/observability/report-cli.js --period 7d --post"
+    "obs:post:weekly": "node dist/proxy-mcp/observability/report-cli.js --period 7d --post",
+    "chrome:debug:start": "node dist/proxy-mcp/browser/cdp/chrome-debug-cli.js",
+    "chrome:cdp:smoke": "node dist/proxy-mcp/browser/cdp/cdp-smoke-cli.js"
   },
   "keywords": [
     "ai",
@@ -78,6 +80,7 @@
     "eslint": "^8.55.0",
     "jest": "^29.7.0",
     "nodemon": "^3.0.2",
+    "playwright-core": "^1.57.0",
     "ts-jest": "^29.4.6",
     "typedoc": "^0.25.4",
     "typescript": "^5.3.2"
