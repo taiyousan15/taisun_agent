@@ -1,7 +1,255 @@
 {
-  "$schema": "./catalog.schema.json",
   "version": "1.0.0",
-  "generatedAt": null,
-  "sources": [],
-  "entries": []
+  "generatedAt": "2026-01-03T06:58:41.309Z",
+  "sources": [
+    "awesome_mcp_servers.sample"
+  ],
+  "entries": [
+    {
+      "id": "puppeteer-mcp",
+      "name": "puppeteer-mcp",
+      "description": "Browser automation with Puppeteer",
+      "url": "https://github.com/anthropics/mcp-servers/tree/main/puppeteer",
+      "category": "browser",
+      "sourceId": "awesome_mcp_servers.sample",
+      "addedAt": "2026-01-03T06:58:34.654Z",
+      "riskLevel": "low",
+      "tags": [
+        "browser",
+        "puppeteer"
+      ],
+      "baseScore": 50,
+      "finalScore": 95,
+      "requireHuman": false,
+      "blocked": false
+    },
+    {
+      "id": "playwright-mcp",
+      "name": "playwright-mcp",
+      "description": "Browser automation with Playwright",
+      "url": "https://github.com/anthropics/mcp-servers/tree/main/playwright",
+      "category": "browser",
+      "sourceId": "awesome_mcp_servers.sample",
+      "addedAt": "2026-01-03T06:58:34.655Z",
+      "riskLevel": "low",
+      "tags": [
+        "browser",
+        "playwright"
+      ],
+      "baseScore": 50,
+      "finalScore": 95,
+      "requireHuman": false,
+      "blocked": false
+    },
+    {
+      "id": "filesystem-mcp",
+      "name": "filesystem-mcp",
+      "description": "File system operations",
+      "url": "https://github.com/anthropics/mcp-servers/tree/main/filesystem",
+      "category": "filesystem",
+      "sourceId": "awesome_mcp_servers.sample",
+      "addedAt": "2026-01-03T06:58:34.655Z",
+      "riskLevel": "low",
+      "tags": [
+        "filesystem"
+      ],
+      "baseScore": 50,
+      "finalScore": 55,
+      "requireHuman": false,
+      "blocked": false
+    },
+    {
+      "id": "memory-mcp",
+      "name": "memory-mcp",
+      "description": "In-memory key-value storage",
+      "url": "https://github.com/anthropics/mcp-servers/tree/main/memory",
+      "category": "filesystem",
+      "sourceId": "awesome_mcp_servers.sample",
+      "addedAt": "2026-01-03T06:58:34.655Z",
+      "riskLevel": "high",
+      "tags": [
+        "filesystem"
+      ],
+      "baseScore": 50,
+      "finalScore": 35,
+      "requireHuman": true,
+      "blocked": false
+    },
+    {
+      "id": "postgres-mcp",
+      "name": "postgres-mcp",
+      "description": "PostgreSQL database integration",
+      "url": "https://github.com/anthropics/mcp-servers/tree/main/postgres",
+      "category": "database",
+      "sourceId": "awesome_mcp_servers.sample",
+      "addedAt": "2026-01-03T06:58:34.655Z",
+      "riskLevel": "medium",
+      "tags": [
+        "database",
+        "postgres"
+      ],
+      "baseScore": 50,
+      "finalScore": 70,
+      "requireHuman": false,
+      "blocked": false
+    },
+    {
+      "id": "sqlite-mcp",
+      "name": "sqlite-mcp",
+      "description": "SQLite database integration",
+      "url": "https://github.com/anthropics/mcp-servers/tree/main/sqlite",
+      "category": "database",
+      "sourceId": "awesome_mcp_servers.sample",
+      "addedAt": "2026-01-03T06:58:34.655Z",
+      "riskLevel": "medium",
+      "tags": [
+        "database"
+      ],
+      "baseScore": 50,
+      "finalScore": 70,
+      "requireHuman": false,
+      "blocked": false
+    },
+    {
+      "id": "fetch-mcp",
+      "name": "fetch-mcp",
+      "description": "HTTP fetch operations",
+      "url": "https://github.com/anthropics/mcp-servers/tree/main/fetch",
+      "category": "web-api",
+      "sourceId": "awesome_mcp_servers.sample",
+      "addedAt": "2026-01-03T06:58:34.655Z",
+      "riskLevel": "low",
+      "tags": [
+        "web-api",
+        "http"
+      ],
+      "baseScore": 50,
+      "finalScore": 75,
+      "requireHuman": false,
+      "blocked": false
+    },
+    {
+      "id": "brave-search-mcp",
+      "name": "brave-search-mcp",
+      "description": "Brave Search API",
+      "url": "https://github.com/anthropics/mcp-servers/tree/main/brave-search",
+      "category": "web-api",
+      "sourceId": "awesome_mcp_servers.sample",
+      "addedAt": "2026-01-03T06:58:34.655Z",
+      "riskLevel": "low",
+      "tags": [
+        "web-api"
+      ],
+      "baseScore": 50,
+      "finalScore": 75,
+      "requireHuman": false,
+      "blocked": false
+    },
+    {
+      "id": "github-mcp",
+      "name": "github-mcp",
+      "description": "GitHub integration",
+      "url": "https://github.com/anthropics/mcp-servers/tree/main/github",
+      "category": "development",
+      "sourceId": "awesome_mcp_servers.sample",
+      "addedAt": "2026-01-03T06:58:34.655Z",
+      "riskLevel": "low",
+      "tags": [
+        "development",
+        "github"
+      ],
+      "baseScore": 50,
+      "finalScore": 60,
+      "requireHuman": false,
+      "blocked": false
+    },
+    {
+      "id": "git-mcp",
+      "name": "git-mcp",
+      "description": "Git operations",
+      "url": "https://github.com/anthropics/mcp-servers/tree/main/git",
+      "category": "development",
+      "sourceId": "awesome_mcp_servers.sample",
+      "addedAt": "2026-01-03T06:58:34.655Z",
+      "riskLevel": "low",
+      "tags": [
+        "development",
+        "git"
+      ],
+      "baseScore": 50,
+      "finalScore": 60,
+      "requireHuman": false,
+      "blocked": false
+    },
+    {
+      "id": "aws-mcp",
+      "name": "aws-mcp",
+      "description": "AWS cloud operations (requires credentials)",
+      "url": "https://github.com/example/aws-mcp",
+      "category": "cloud",
+      "sourceId": "awesome_mcp_servers.sample",
+      "addedAt": "2026-01-03T06:58:34.655Z",
+      "riskLevel": "medium",
+      "tags": [
+        "cloud",
+        "aws"
+      ],
+      "baseScore": 50,
+      "finalScore": 25,
+      "requireHuman": false,
+      "blocked": false
+    },
+    {
+      "id": "docker-mcp",
+      "name": "docker-mcp",
+      "description": "Docker container management",
+      "url": "https://github.com/example/docker-mcp",
+      "category": "cloud",
+      "sourceId": "awesome_mcp_servers.sample",
+      "addedAt": "2026-01-03T06:58:34.655Z",
+      "riskLevel": "low",
+      "tags": [
+        "cloud",
+        "docker"
+      ],
+      "baseScore": 50,
+      "finalScore": 45,
+      "requireHuman": false,
+      "blocked": false
+    },
+    {
+      "id": "shell-exec-mcp",
+      "name": "shell-exec-mcp",
+      "description": "Execute arbitrary shell commands",
+      "url": "https://github.com/example/shell-exec-mcp",
+      "category": "dangerous",
+      "sourceId": "awesome_mcp_servers.sample",
+      "addedAt": "2026-01-03T06:58:34.655Z",
+      "riskLevel": "high",
+      "tags": [
+        "dangerous"
+      ],
+      "baseScore": 50,
+      "finalScore": 0,
+      "requireHuman": true,
+      "blocked": false
+    },
+    {
+      "id": "root-access-mcp",
+      "name": "root-access-mcp",
+      "description": "Root/admin access operations",
+      "url": "https://github.com/example/root-access-mcp",
+      "category": "dangerous",
+      "sourceId": "awesome_mcp_servers.sample",
+      "addedAt": "2026-01-03T06:58:34.655Z",
+      "riskLevel": "critical",
+      "tags": [
+        "dangerous"
+      ],
+      "baseScore": 50,
+      "finalScore": 0,
+      "requireHuman": true,
+      "blocked": true
+    }
+  ]
 }

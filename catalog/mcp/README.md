@@ -14,9 +14,10 @@ This directory contains MCP server candidates discovered from external sources (
 catalog/mcp/
 ├── README.md                          # This file
 ├── sources.json                       # List of external sources
-├── awesome_mcp_servers.sample.md      # Sample fixture for testing
 ├── catalog.json                       # Generated catalog (candidates)
-└── overrides.json                     # Manual score adjustments
+├── overrides.json                     # Manual score adjustments
+└── fixtures/                          # Test fixtures (CI uses these)
+    └── awesome_mcp_servers.sample.md  # Sample awesome-list markdown
 ```
 
 ## Workflow
@@ -26,6 +27,22 @@ catalog/mcp/
 2. Score: Apply scoring rules + overrides
 3. Generate: Create disabled stubs in internal-mcps.local.example.generated.json
 4. Enable: Phase 6 rollout (canary → rollback → observability)
+```
+
+## CLI Commands
+
+```bash
+# Import from fixture → catalog.json
+npm run catalog:import
+
+# Score entries + apply overrides
+npm run catalog:score
+
+# Generate disabled stubs
+npm run catalog:stubs
+
+# Generate only top 20 candidates
+npm run catalog:stubs -- --top 20
 ```
 
 ## Important
