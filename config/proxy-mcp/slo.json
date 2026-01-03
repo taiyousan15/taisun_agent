@@ -1,0 +1,50 @@
+{
+  "$schema": "./slo.schema.json",
+  "version": "1.0.0",
+  "description": "SLO thresholds for proxy-mcp operations",
+  "thresholds": {
+    "queue": {
+      "sizeWarn": 50,
+      "sizeCritical": 200,
+      "description": "Job queue size thresholds"
+    },
+    "waitingApproval": {
+      "warnMinutes": 60,
+      "criticalMinutes": 360,
+      "description": "Jobs waiting for approval time thresholds"
+    },
+    "dlq": {
+      "newWarn": 5,
+      "newCritical": 20,
+      "description": "New DLQ entries (in evaluation period) thresholds"
+    },
+    "jobFailure": {
+      "rateWarn": 0.05,
+      "rateCritical": 0.15,
+      "description": "Job failure rate thresholds (0.0-1.0)"
+    },
+    "watcherErrors": {
+      "countWarn": 3,
+      "countCritical": 10,
+      "description": "Approval watcher consecutive error count"
+    },
+    "circuitBreaker": {
+      "openWarn": 1,
+      "openCritical": 3,
+      "description": "Number of open circuit breakers"
+    }
+  },
+  "evaluation": {
+    "periodHours": 24,
+    "cooldownMinutes": 15,
+    "description": "How often to evaluate and minimum time between alerts"
+  },
+  "alerts": {
+    "enabled": true,
+    "mode": "comment",
+    "targetIssueNumber": null,
+    "createNewOnCritical": false,
+    "repository": null,
+    "description": "Alert posting configuration (mode: comment | newIssue)"
+  }
+}
