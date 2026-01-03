@@ -48,7 +48,9 @@
     "obs:post:weekly": "node dist/proxy-mcp/observability/report-cli.js --period 7d --post",
     "chrome:debug:start": "node dist/proxy-mcp/browser/cdp/chrome-debug-cli.js",
     "chrome:cdp:smoke": "node dist/proxy-mcp/browser/cdp/cdp-smoke-cli.js",
-    "jobs:dlq:triage": "npx ts-node scripts/jobs/dlq-triage.ts"
+    "jobs:dlq:triage": "npx ts-node scripts/jobs/dlq-triage.ts",
+    "ops:slo:check": "npx ts-node scripts/ops/slo-check.ts",
+    "ops:slo:check:post": "npx ts-node scripts/ops/slo-check.ts --post"
   },
   "keywords": [
     "ai",

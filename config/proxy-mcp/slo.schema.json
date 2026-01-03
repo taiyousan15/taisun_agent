@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SLO Configuration",
+  "type": "object",
+  "required": ["version", "thresholds"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Configuration version"
+    },
+    "description": {
+      "type": "string"
+    },
+    "thresholds": {
+      "type": "object",
+      "required": ["queue", "waitingApproval", "dlq", "jobFailure"],
+      "properties": {
+        "queue": {
+          "type": "object",
+          "required": ["sizeWarn", "sizeCritical"],
+          "properties": {
+            "sizeWarn": { "type": "integer", "minimum": 1 },
+            "sizeCritical": { "type": "integer", "minimum": 1 },
+            "description": { "type": "string" }
+          }
+        },
+        "waitingApproval": {
+          "type": "object",
+          "required": ["warnMinutes", "criticalMinutes"],
+          "properties": {
+            "warnMinutes": { "type": "integer", "minimum": 1 },
+            "criticalMinutes": { "type": "integer", "minimum": 1 },
+            "description": { "type": "string" }
+          }
+        },
+        "dlq": {
+          "type": "object",
+          "required": ["newWarn", "newCritical"],
+          "properties": {
+            "newWarn": { "type": "integer", "minimum": 1 },
+            "newCritical": { "type": "integer", "minimum": 1 },
+            "description": { "type": "string" }
+          }
+        },
+        "jobFailure": {
+          "type": "object",
+          "required": ["rateWarn", "rateCritical"],
+          "properties": {
+            "rateWarn": { "type": "number", "minimum": 0, "maximum": 1 },
+            "rateCritical": { "type": "number", "minimum": 0, "maximum": 1 },
+            "description": { "type": "string" }
+          }
+        },
+        "watcherErrors": {
+          "type": "object",
+          "properties": {
+            "countWarn": { "type": "integer", "minimum": 1 },
+            "countCritical": { "type": "integer", "minimum": 1 },
+            "description": { "type": "string" }
+          }
+        },
+        "circuitBreaker": {
+          "type": "object",
+          "properties": {
+            "openWarn": { "type": "integer", "minimum": 1 },
+            "openCritical": { "type": "integer", "minimum": 1 },
+            "description": { "type": "string" }
+          }
+        }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "properties": {
+        "periodHours": { "type": "integer", "minimum": 1 },
+        "cooldownMinutes": { "type": "integer", "minimum": 1 },
+        "description": { "type": "string" }
+      }
+    },
+    "alerts": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "mode": { "type": "string", "enum": ["comment", "newIssue"] },
+        "targetIssueNumber": { "type": ["integer", "null"] },
+        "createNewOnCritical": { "type": "boolean" },
+        "repository": { "type": ["string", "null"] },
+        "description": { "type": "string" }
+      }
+    }
+  }
+}
