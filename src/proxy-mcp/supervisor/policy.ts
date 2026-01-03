@@ -1,10 +1,12 @@
 /**
- * Supervisor Policy - M6
+ * Supervisor Policy - M6 (Updated P11)
  *
- * Policy checks for dangerous operations
+ * Policy checks for dangerous operations.
+ * Patterns are now loaded from config/proxy-mcp/policy.json.
  */
 
-import { DANGEROUS_PATTERNS, RouteDecision, ExecutionPlan, PlanStep } from './types';
+import { RouteDecision, ExecutionPlan, PlanStep } from './types';
+import { getDangerousPatterns } from '../policy';
 
 /**
  * Check if input contains dangerous patterns
@@ -12,8 +14,9 @@ import { DANGEROUS_PATTERNS, RouteDecision, ExecutionPlan, PlanStep } from './ty
 export function checkDangerousPatterns(input: string): string[] {
   const inputLower = input.toLowerCase();
   const matched: string[] = [];
+  const patterns = getDangerousPatterns().all;
 
-  for (const pattern of DANGEROUS_PATTERNS) {
+  for (const pattern of patterns) {
     // Handle patterns with dots/underscores
     const normalizedPattern = pattern.replace(/[._]/g, '[._]?');
     const regex = new RegExp(normalizedPattern, 'i');

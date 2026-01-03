@@ -17,6 +17,7 @@ import {
   MemoryOutput,
 } from './types';
 import { createStore } from './store';
+import { redactSecrets } from '../security';
 
 const CONFIG_PATH = path.join(process.cwd(), 'config', 'proxy-mcp', 'memory.json');
 
@@ -74,8 +75,11 @@ export class MemoryService {
     // Generate ID
     const id = crypto.randomBytes(8).toString('hex');
 
+    // Redact secrets from content before storing
+    const redactedContent = redactSecrets(content).redacted;
+
     // Generate summary (truncate if needed)
-    const summary = this.generateSummary(content, nsConfig.maxSummaryChars);
+    const summary = this.generateSummary(redactedContent, nsConfig.maxSummaryChars);
 
     // Calculate expiry
     const now = Date.now();
@@ -83,9 +87,9 @@ export class MemoryService {
 
     // Truncate content if needed
     const truncatedContent =
-      content.length > nsConfig.maxContentChars
-        ? content.slice(0, nsConfig.maxContentChars) + '... [truncated]'
-        : content;
+      redactedContent.length > nsConfig.maxContentChars
+        ? redactedContent.slice(0, nsConfig.maxContentChars) + '... [truncated]'
+        : redactedContent;
 
     const entry: MemoryEntry = {
       id,

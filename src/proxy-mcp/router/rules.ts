@@ -5,52 +5,48 @@
  * 1. Deny rules (highest priority - block immediately)
  * 2. Require human rules (dangerous operations)
  * 3. Allow rules (explicitly permitted)
+ *
+ * Rules are now loaded from config/proxy-mcp/policy.json (P11).
  */
 
 import { RouteAction, RouteResult, SafetyRule } from './types';
+import { loadPolicy, evaluatePolicy as evaluatePolicyConfig } from '../policy';
 
 /**
- * Safety rules for dangerous operations
- * These always take precedence over semantic routing
+ * Build SAFETY_RULES from policy config
  */
-const SAFETY_RULES: SafetyRule[] = [
-  {
-    category: 'deployment',
-    keywords: ['deploy', 'production', 'release', 'publish', 'rollout'],
-    patterns: [/deploy\s+to\s+prod/i, /push\s+to\s+production/i, /release\s+v\d/i],
-    action: 'require_human',
-  },
-  {
-    category: 'destructive',
-    keywords: ['delete', 'drop', 'truncate', 'remove', 'destroy', 'wipe'],
-    patterns: [/drop\s+table/i, /delete\s+all/i, /rm\s+-rf/i, /truncate\s+table/i],
-    action: 'require_human',
-  },
-  {
-    category: 'secrets',
-    keywords: ['secret', 'credential', 'password', 'token', 'api_key', 'private_key'],
-    patterns: [/rotate\s+(secret|key|token)/i, /update\s+credential/i],
-    action: 'require_human',
-  },
-  {
-    category: 'billing',
-    keywords: ['billing', 'payment', 'invoice', 'subscription', 'charge'],
-    patterns: [/cancel\s+subscription/i, /change\s+plan/i, /update\s+billing/i],
-    action: 'require_human',
-  },
-  {
-    category: 'access_control',
-    keywords: ['permission', 'role', 'access', 'admin', 'sudo', 'root'],
-    patterns: [/grant\s+admin/i, /change\s+role/i, /elevate\s+privilege/i],
-    action: 'require_human',
-  },
-  {
-    category: 'automation_abuse',
-    keywords: ['captcha', 'bypass', 'scrape', 'spam', 'flood'],
-    patterns: [/bypass\s+captcha/i, /mass\s+scrape/i, /automated\s+login/i],
-    action: 'deny',
-  },
-];
+function buildSafetyRules(): SafetyRule[] {
+  const policy = loadPolicy();
+  return policy.safetyRules.map((rule) => ({
+    category: rule.category,
+    keywords: rule.keywords,
+    patterns: rule.patterns.map((p) => new RegExp(p, 'i')),
+    action: rule.action as RouteAction,
+  }));
+}
+
+// Cache for compiled rules
+let cachedRules: SafetyRule[] | null = null;
+
+/**
+ * Get safety rules (cached)
+ */
+function getSafetyRules(): SafetyRule[] {
+  if (!cachedRules) {
+    cachedRules = buildSafetyRules();
+  }
+  return cachedRules;
+}
+
+/**
+ * Clear cached rules (for testing)
+ */
+export function clearRulesCache(): void {
+  cachedRules = null;
+}
+
+// Export for backwards compatibility (used by tests)
+export const SAFETY_RULES: SafetyRule[] = buildSafetyRules();
 
 /**
  * Check if input matches any keyword
@@ -83,8 +79,9 @@ function matchesPatterns(input: string, patterns: RegExp[]): RegExp | null {
  */
 export function evaluateSafetyRules(input: string): RouteResult | null {
   let result: RouteResult | null = null;
+  const rules = getSafetyRules();
 
-  for (const rule of SAFETY_RULES) {
+  for (const rule of rules) {
     // Check keywords
     const matchedKeyword = matchesKeywords(input, rule.keywords);
     if (matchedKeyword) {
@@ -143,10 +140,5 @@ export function isDangerousOperation(
  * Get all safety rule categories
  */
 export function getSafetyCategories(): string[] {
-  return SAFETY_RULES.map((rule) => rule.category);
+  return getSafetyRules().map((rule) => rule.category);
 }
-
-/**
- * Export safety rules for testing
- */
-export { SAFETY_RULES };
