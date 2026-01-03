@@ -1,0 +1,118 @@
+# Docker Compose for TAISUN Ops - P13
+#
+# Services:
+# - proxy: MCP proxy server (Claude <-> Internal MCPs)
+# - worker: Job worker (executes queued jobs)
+# - watcher: Approval watcher (polls GitHub for approvals)
+#
+# Prerequisites:
+# - Docker Engine 24.0+
+# - Docker Compose v2+
+#
+# Usage:
+#   docker compose -f ops/docker-compose.ops.yml up -d
+#   docker compose -f ops/docker-compose.ops.yml logs -f
+#   docker compose -f ops/docker-compose.ops.yml down
+#
+# Volume Mounts:
+# - ./data/jobs: Job store persistence (jsonl)
+# - ./data/observability: Event logs, reports
+# - ./data/memory: Memory store persistence
+
+version: "3.8"
+
+services:
+  proxy:
+    build:
+      context: ..
+      dockerfile: ops/Dockerfile
+    container_name: taisun-proxy
+    restart: unless-stopped
+    ports:
+      - "${PROXY_PORT:-3100}:3100"
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - JOBS_STORE_TYPE=jsonl
+      - JOBS_STORE_PATH=/data/jobs/store.jsonl
+      - OBS_EVENTS_PATH=/data/observability/events.jsonl
+      - MEMORY_STORE_PATH=/data/memory
+      # MCP Configuration
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - NOTION_TOKEN=${NOTION_TOKEN:-}
+      - POSTGRES_DSN=${POSTGRES_DSN:-}
+    volumes:
+      - jobs-data:/data/jobs
+      - obs-data:/data/observability
+      - memory-data:/data/memory
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3100/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - taisun-net
+
+  worker:
+    build:
+      context: ..
+      dockerfile: ops/Dockerfile
+    container_name: taisun-worker
+    restart: unless-stopped
+    command: ["node", "dist/proxy-mcp/jobs/worker-cli.js"]
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - WORKER_DRY_RUN=${WORKER_DRY_RUN:-false}
+      - WORKER_MAX_CONCURRENT=${WORKER_MAX_CONCURRENT:-3}
+      - JOBS_STORE_TYPE=jsonl
+      - JOBS_STORE_PATH=/data/jobs/store.jsonl
+      # Job execution
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - NOTION_TOKEN=${NOTION_TOKEN:-}
+      - POSTGRES_DSN=${POSTGRES_DSN:-}
+    volumes:
+      - jobs-data:/data/jobs
+      - memory-data:/data/memory
+    depends_on:
+      proxy:
+        condition: service_healthy
+    networks:
+      - taisun-net
+
+  watcher:
+    build:
+      context: ..
+      dockerfile: ops/Dockerfile
+    container_name: taisun-watcher
+    restart: unless-stopped
+    command: ["node", "dist/proxy-mcp/jobs/watcher-cli.js"]
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - WATCHER_POLL_INTERVAL_MS=${WATCHER_POLL_INTERVAL_MS:-60000}
+      - WATCHER_REPO=${WATCHER_REPO:-}
+      - JOBS_STORE_TYPE=jsonl
+      - JOBS_STORE_PATH=/data/jobs/store.jsonl
+      # GitHub API
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+    volumes:
+      - jobs-data:/data/jobs
+    depends_on:
+      proxy:
+        condition: service_healthy
+    networks:
+      - taisun-net
+
+volumes:
+  jobs-data:
+    driver: local
+  obs-data:
+    driver: local
+  memory-data:
+    driver: local
+
+networks:
+  taisun-net:
+    driver: bridge

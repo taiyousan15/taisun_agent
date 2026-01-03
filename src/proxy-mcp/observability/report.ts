@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ObservabilityEvent, EventType, MetricsSummary } from './types';
 import { getCircuitSummary } from '../internal/circuit-breaker';
+import { getJobStore, JobQueue, DLQEntry } from '../jobs';
 
 const EVENTS_DIR = path.join(process.cwd(), '.taisun', 'observability');
 const EVENTS_FILE = path.join(EVENTS_DIR, 'events.jsonl');
@@ -28,6 +29,21 @@ export interface McpMetrics {
   circuitOpenCount: number;
 }
 
+/**
+ * Job metrics for reporting
+ */
+export interface JobMetrics {
+  queueSize: number;
+  running: number;
+  waitingApproval: number;
+  dlqCount: number;
+  succeeded: number;
+  failed: number;
+  backpressureActive: boolean;
+  utilizationPercent: number;
+  topFailureReasons: Array<{ reason: string; count: number }>;
+}
+
 export interface ReportData {
   period: ReportPeriod;
   totalEvents: number;
@@ -43,6 +59,7 @@ export interface ReportData {
     open: number;
     halfOpen: number;
   };
+  jobMetrics?: JobMetrics;
   recommendations: string[];
 }
 
@@ -89,9 +106,95 @@ function percentile(arr: number[], p: number): number {
 }
 
 /**
+ * Redact sensitive values from error messages
+ */
+function redactSensitiveData(text: string): string {
+  // Redact potential secrets, tokens, keys
+  const patterns = [
+    /(?:token|key|secret|password|auth|bearer)[:\s=]["']?[a-zA-Z0-9_./+=-]{10,}/gi,
+    /ghp_[a-zA-Z0-9]{36}/g, // GitHub personal access token
+    /gho_[a-zA-Z0-9]{36}/g, // GitHub OAuth token
+    /sk-[a-zA-Z0-9]{32,}/g, // OpenAI-style API key
+    /xoxb-[a-zA-Z0-9-]+/g, // Slack bot token
+    /xoxp-[a-zA-Z0-9-]+/g, // Slack user token
+  ];
+
+  let result = text;
+  for (const pattern of patterns) {
+    result = result.replace(pattern, '[REDACTED]');
+  }
+  return result;
+}
+
+/**
+ * Collect job metrics from store and queue
+ */
+async function collectJobMetrics(queue?: JobQueue): Promise<JobMetrics | undefined> {
+  try {
+    const store = getJobStore();
+    await store.init();
+    const stats = await store.getStats();
+
+    // Get DLQ info from queue if available
+    let dlqCount = 0;
+    let backpressureActive = false;
+    let utilizationPercent = 0;
+    let topFailureReasons: Array<{ reason: string; count: number }> = [];
+
+    if (queue) {
+      const dlqEntries = queue.getDLQ();
+      dlqCount = dlqEntries.length;
+      backpressureActive = queue.isBackpressureActive();
+      const queueStats = await queue.getStats();
+      utilizationPercent = queueStats.utilizationPercent;
+
+      // Collect failure reasons from DLQ (redacted)
+      const reasonCounts = new Map<string, number>();
+      for (const entry of dlqEntries) {
+        const redactedReason = redactSensitiveData(entry.reason).substring(0, 50);
+        reasonCounts.set(redactedReason, (reasonCounts.get(redactedReason) || 0) + 1);
+      }
+      topFailureReasons = [...reasonCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([reason, count]) => ({ reason, count }));
+    } else {
+      // Collect failure reasons from failed jobs
+      const failedJobs = await store.listByStatus('failed', 20);
+      const reasonCounts = new Map<string, number>();
+      for (const job of failedJobs) {
+        if (job.lastError) {
+          const redactedReason = redactSensitiveData(job.lastError).substring(0, 50);
+          reasonCounts.set(redactedReason, (reasonCounts.get(redactedReason) || 0) + 1);
+        }
+      }
+      topFailureReasons = [...reasonCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([reason, count]) => ({ reason, count }));
+    }
+
+    return {
+      queueSize: stats.queued,
+      running: stats.running,
+      waitingApproval: stats.waiting_approval,
+      dlqCount,
+      succeeded: stats.succeeded,
+      failed: stats.failed,
+      backpressureActive,
+      utilizationPercent,
+      topFailureReasons,
+    };
+  } catch {
+    // Job store not available
+    return undefined;
+  }
+}
+
+/**
  * Generate report for a time period
  */
-export function generateReport(period: ReportPeriod): ReportData {
+export async function generateReport(period: ReportPeriod, queue?: JobQueue): Promise<ReportData> {
   const events = loadEvents(period.start);
   const filteredEvents = events.filter(
     (e) => new Date(e.timestamp) >= period.start && new Date(e.timestamp) <= period.end
@@ -171,6 +274,9 @@ export function generateReport(period: ReportPeriod): ReportData {
   // Circuit summary
   const circuitSummary = getCircuitSummary();
 
+  // Job metrics
+  const jobMetrics = await collectJobMetrics(queue);
+
   // Generate recommendations
   const recommendations: string[] = [];
   if (successRate < 0.95) {
@@ -188,6 +294,22 @@ export function generateReport(period: ReportPeriod): ReportData {
     }
   }
 
+  // Job-related recommendations
+  if (jobMetrics) {
+    if (jobMetrics.dlqCount > 0) {
+      recommendations.push(`DLQに${jobMetrics.dlqCount}件のジョブがあります。トリアージを実行してください。`);
+    }
+    if (jobMetrics.backpressureActive) {
+      recommendations.push('キューにバックプレッシャーがかかっています。処理能力を確認してください。');
+    }
+    if (jobMetrics.waitingApproval > 5) {
+      recommendations.push(`${jobMetrics.waitingApproval}件のジョブが承認待ちです。Approval Watcherを確認してください。`);
+    }
+    if (jobMetrics.failed > 10) {
+      recommendations.push(`${jobMetrics.failed}件のジョブが失敗しています。失敗理由を分析してください。`);
+    }
+  }
+
   return {
     period,
     totalEvents,
@@ -198,7 +320,8 @@ export function generateReport(period: ReportPeriod): ReportData {
     topSkills,
     topTools,
     circuitSummary,
-    recommendations: recommendations.slice(0, 3),
+    jobMetrics,
+    recommendations: recommendations.slice(0, 5),
   };
 }
 
@@ -264,6 +387,32 @@ export function formatReportMarkdown(data: ReportData): string {
   lines.push(`- Open: ${data.circuitSummary.open}`);
   lines.push(`- Half-Open: ${data.circuitSummary.halfOpen}`);
   lines.push('');
+
+  // Job metrics
+  if (data.jobMetrics) {
+    lines.push('## Job実行状態');
+    lines.push('');
+    lines.push('| 項目 | 値 |');
+    lines.push('|------|-----|');
+    lines.push(`| キュー待ち | ${data.jobMetrics.queueSize} |`);
+    lines.push(`| 実行中 | ${data.jobMetrics.running} |`);
+    lines.push(`| 承認待ち | ${data.jobMetrics.waitingApproval} |`);
+    lines.push(`| 成功 | ${data.jobMetrics.succeeded} |`);
+    lines.push(`| 失敗 | ${data.jobMetrics.failed} |`);
+    lines.push(`| DLQ | ${data.jobMetrics.dlqCount} |`);
+    lines.push(`| バックプレッシャー | ${data.jobMetrics.backpressureActive ? '⚠️ 有効' : '正常'} |`);
+    lines.push(`| キュー使用率 | ${data.jobMetrics.utilizationPercent}% |`);
+    lines.push('');
+
+    if (data.jobMetrics.topFailureReasons.length > 0) {
+      lines.push('### 主な失敗理由');
+      lines.push('');
+      for (const reason of data.jobMetrics.topFailureReasons) {
+        lines.push(`- ${reason.reason}: ${reason.count}件`);
+      }
+      lines.push('');
+    }
+  }
 
   // Recommendations
   if (data.recommendations.length > 0) {

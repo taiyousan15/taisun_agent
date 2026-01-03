@@ -30,9 +30,9 @@ describe('Observability Report', () => {
   });
 
   describe('generateReport', () => {
-    it('should generate valid report structure', () => {
+    it('should generate valid report structure', async () => {
       const period = getLast24hPeriod();
-      const report = generateReport(period);
+      const report = await generateReport(period);
 
       expect(report.period).toBe(period);
       expect(typeof report.totalEvents).toBe('number');
@@ -46,9 +46,9 @@ describe('Observability Report', () => {
       expect(Array.isArray(report.recommendations)).toBe(true);
     });
 
-    it('should calculate success rate correctly', () => {
+    it('should calculate success rate correctly', async () => {
       const period = getLast24hPeriod();
-      const report = generateReport(period);
+      const report = await generateReport(period);
 
       // Success rate should be between 0 and 1
       expect(report.successRate).toBeGreaterThanOrEqual(0);
