@@ -9,4 +9,14 @@
 
 export * from './types';
 export { detectCaptcha, guardCaptcha, checkBlockedPatterns } from './captcha';
-export { readUrl, extractLinks, captureDomMap } from './skills';
+export {
+  readUrl,
+  extractLinks,
+  captureDomMap,
+  listTabsUrls,
+  normalizeUrlBundle,
+  getUrlBundleStats,
+  batchSkillizeUrlBundle,
+  batchSkillizePreview,
+  webSkillizeFromTabs,
+} from './skills';

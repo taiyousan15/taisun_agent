@@ -12,7 +12,7 @@ import * as path from 'path';
 import { SkillDefinition, ToolResult } from '../types';
 import { route, RouteResult } from '../router';
 import { getAllMcps, getRouterConfig } from '../internal/registry';
-import { readUrl, extractLinks, captureDomMap } from '../browser';
+import { readUrl, extractLinks, captureDomMap, webSkillizeFromTabs } from '../browser';
 import { skillize as skillizeCore, SkillizeOptions } from '../skillize';
 import {
   runSupervisor,
@@ -110,6 +110,11 @@ export function skillRun(
     // M4: Handle web skills (async, return promise wrapper)
     if (skillName.startsWith('web.')) {
       return runWebSkill(skillName, params);
+    }
+
+    // P7.3: Handle pipeline skills (async, return promise wrapper)
+    if (skillName.startsWith('pipeline.')) {
+      return runPipelineSkill(skillName, params);
     }
 
     // M5: Handle skillize (async, return promise wrapper)
@@ -250,6 +255,32 @@ function runSkillize(params?: Record<string, unknown>): ToolResult {
 }
 
 /**
+ * Run pipeline skill sync check (P7.3)
+ *
+ * Returns ready status for pipeline skills.
+ */
+function runPipelineSkill(skillName: string, params?: Record<string, unknown>): ToolResult {
+  const confirmWrite = params?.confirmWrite === true;
+  const inputRefId = params?.inputRefId as string | undefined;
+
+  return {
+    success: true,
+    data: {
+      skill: skillName,
+      inputRefId: inputRefId || null,
+      confirmWrite,
+      status: 'ready',
+      message: inputRefId
+        ? `Pipeline ready (using inputRefId: ${inputRefId}). Use skillRunAsync() for execution.`
+        : confirmWrite
+          ? 'Pipeline ready (WRITE mode). Use skillRunAsync() for execution.'
+          : 'Pipeline ready (dry-run mode). Use skillRunAsync() for execution.',
+      asyncRequired: true,
+    },
+  };
+}
+
+/**
  * Run supervisor sync check (M6)
  *
  * Checks if input contains dangerous patterns and returns ready status.
@@ -351,6 +382,50 @@ export async function skillRunAsync(
       return {
         success: false,
         error: `Supervisor failed: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  }
+
+  // P7.3: Handle pipeline skills (don't require URL)
+  if (skillName.startsWith('pipeline.')) {
+    try {
+      switch (skillName) {
+        case 'pipeline.web_skillize_from_tabs': {
+          const result = await webSkillizeFromTabs({
+            inputRefId: params?.inputRefId as string | undefined,
+            includeDomains: params?.includeDomains as string[] | undefined,
+            excludeDomains: params?.excludeDomains as string[] | undefined,
+            excludeUrlPatterns: params?.excludeUrlPatterns as string[] | undefined,
+            maxUrls: params?.maxUrls as number | undefined,
+            perDomainLimit: params?.perDomainLimit as number | undefined,
+            stripTracking: params?.stripTracking as boolean | undefined,
+            maxFetch: params?.maxFetch as number | undefined,
+            rateLimitMs: params?.rateLimitMs as number | undefined,
+            confirmWrite: params?.confirmWrite === true,
+            namespace: (params?.namespace as 'short-term' | 'long-term') || 'long-term',
+          });
+          return {
+            success: result.success,
+            referenceId: result.refId,
+            data: {
+              action: result.action,
+              summary: result.summary,
+              ...result.data,
+            },
+            error: result.error,
+          };
+        }
+
+        default:
+          return {
+            success: false,
+            error: `Unknown pipeline skill: ${skillName}. Available: pipeline.web_skillize_from_tabs`,
+          };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: `Pipeline failed: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }
