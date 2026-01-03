@@ -1,0 +1,9 @@
+# Golden Case: Internal/Admin URLs
+# Expected: require_human for destructive/admin ops
+# Category: internal
+
+https://admin.example.com/users/delete
+https://admin.example.com/settings/deployment
+https://admin.example.com/secrets/rotate
+https://internal.example.com/billing/update
+https://internal.example.com/access-control/modify

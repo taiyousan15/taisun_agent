@@ -47,7 +47,10 @@
     "obs:post:daily": "node dist/proxy-mcp/observability/report-cli.js --period 24h --post",
     "obs:post:weekly": "node dist/proxy-mcp/observability/report-cli.js --period 7d --post",
     "chrome:debug:start": "node dist/proxy-mcp/browser/cdp/chrome-debug-cli.js",
-    "chrome:cdp:smoke": "node dist/proxy-mcp/browser/cdp/cdp-smoke-cli.js"
+    "chrome:cdp:smoke": "node dist/proxy-mcp/browser/cdp/cdp-smoke-cli.js",
+    "test:evals": "jest --selectProjects evals",
+    "evals:report": "npx ts-node scripts/evals/generate-report.ts",
+    "evals:report:summary": "npx ts-node scripts/evals/generate-report.ts --summary"
   },
   "keywords": [
     "ai",
