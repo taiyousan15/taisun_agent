@@ -12,7 +12,7 @@ import * as path from 'path';
 import { SkillDefinition, ToolResult } from '../types';
 import { route, RouteResult } from '../router';
 import { getAllMcps, getRouterConfig } from '../internal/registry';
-import { readUrl, extractLinks, captureDomMap, webSkillizeFromTabs } from '../browser';
+import { readUrl, extractLinks, captureDomMap, webSkillizeFromTabs, webSkillize } from '../browser';
 import { skillize as skillizeCore, SkillizeOptions } from '../skillize';
 import {
   runSupervisor,
@@ -416,10 +416,45 @@ export async function skillRunAsync(
           };
         }
 
+        case 'pipeline.web_skillize': {
+          const mode = params?.mode as 'tabs' | 'refId';
+          if (!mode) {
+            return {
+              success: false,
+              error: 'mode is required: "tabs" (CDP) or "refId" (existing bundle)',
+            };
+          }
+          const result = await webSkillize({
+            mode,
+            inputRefId: params?.inputRefId as string | undefined,
+            includeDomains: params?.includeDomains as string[] | undefined,
+            excludeDomains: params?.excludeDomains as string[] | undefined,
+            excludeUrlPatterns: params?.excludeUrlPatterns as string[] | undefined,
+            maxUrls: params?.maxUrls as number | undefined,
+            perDomainLimit: params?.perDomainLimit as number | undefined,
+            stripTracking: params?.stripTracking as boolean | undefined,
+            maxFetch: params?.maxFetch as number | undefined,
+            rateLimitMs: params?.rateLimitMs as number | undefined,
+            confirmWrite: params?.confirmWrite === true,
+            namespace: (params?.namespace as 'short-term' | 'long-term') || 'long-term',
+          });
+          return {
+            success: result.success,
+            referenceId: result.refId,
+            data: {
+              action: result.action,
+              summary: result.summary,
+              mode: (result.data as Record<string, unknown>)?.mode,
+              ...result.data,
+            },
+            error: result.error,
+          };
+        }
+
         default:
           return {
             success: false,
-            error: `Unknown pipeline skill: ${skillName}. Available: pipeline.web_skillize_from_tabs`,
+            error: `Unknown pipeline skill: ${skillName}. Available: pipeline.web_skillize, pipeline.web_skillize_from_tabs`,
           };
       }
     } catch (error) {

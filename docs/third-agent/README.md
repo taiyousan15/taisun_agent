@@ -24,6 +24,7 @@
 | [17_CHECKLIST_PLAYWRIGHT_CDP.md](./17_CHECKLIST_PLAYWRIGHT_CDP.md) | Playwright CDP Session Reuseチェックリスト |
 | [18_CHECKLIST_URL_BUNDLE_PIPELINE.md](./18_CHECKLIST_URL_BUNDLE_PIPELINE.md) | URL Bundle Pipelineチェックリスト |
 | [19_CHECKLIST_ONE_COMMAND_PIPELINE.md](./19_CHECKLIST_ONE_COMMAND_PIPELINE.md) | One-Command Pipelineチェックリスト |
+| [20_CHECKLIST_UNIFIED_PIPELINE.md](./20_CHECKLIST_UNIFIED_PIPELINE.md) | Unified Pipelineチェックリスト (P8) |
 
 ### Technical Docs (20-)
 | File | Description |
@@ -46,6 +47,7 @@
 | [31_PLAYWRIGHT_CDP_SESSION_REUSE.md](./31_PLAYWRIGHT_CDP_SESSION_REUSE.md) | Playwright CDP Session Reuse運用手順 |
 | [32_URL_BUNDLE_PIPELINE.md](./32_URL_BUNDLE_PIPELINE.md) | URL Bundle Pipeline設計 |
 | [33_ONE_COMMAND_PIPELINE.md](./33_ONE_COMMAND_PIPELINE.md) | One-Command Pipeline設計 |
+| [34_UNIFIED_PIPELINE.md](./34_UNIFIED_PIPELINE.md) | Unified Pipeline設計 (P8) |
 
 ## 最低限のルール（毎回これだけは守る）
 

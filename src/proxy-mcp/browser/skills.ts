@@ -40,6 +40,11 @@ import {
   runPipelineTabsSkillize as runPipelineCore,
   PipelineTabsSkillizeConfig,
 } from './pipeline-tabs-skillize';
+import {
+  runUnifiedPipeline as runUnifiedPipelineCore,
+  UnifiedPipelineConfig,
+  PipelineMode,
+} from './pipeline-unified-skillize';
 
 /** Backend type for web skills */
 export type WebBackend = 'default' | 'cdp';
@@ -1102,6 +1107,73 @@ export async function webSkillizeFromTabs(
     return {
       success: false,
       error: `pipeline.web_skillize_from_tabs failed: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+}
+
+/**
+ * pipeline.web_skillize - Unified pipeline entrypoint (P8)
+ *
+ * Single entrypoint with explicit mode selection:
+ * - mode='tabs': Collect URLs from Chrome tabs via CDP
+ * - mode='refId': Use existing URL bundle from memory
+ *
+ * Features:
+ * - Minimal output: summary + refId only (no URL lists in response)
+ * - Dry-run by default: confirmWrite=false
+ * - Explicit mode parameter for clear API
+ *
+ * @param options.mode - Required: 'tabs' (CDP) or 'refId' (existing bundle)
+ * @param options.inputRefId - Required when mode='refId'
+ * @param options.includeDomains - Include only these domains
+ * @param options.excludeDomains - Exclude these domains
+ * @param options.excludeUrlPatterns - Exclude URLs matching these patterns
+ * @param options.maxUrls - Maximum URLs to process (default: 200)
+ * @param options.perDomainLimit - Per-domain limit (default: 50)
+ * @param options.stripTracking - Remove tracking parameters (default: true)
+ * @param options.maxFetch - Maximum URLs to skillize (default: 20)
+ * @param options.rateLimitMs - Rate limit between URLs (default: 1000)
+ * @param options.confirmWrite - Write to disk (default: false = dry-run)
+ * @param options.namespace - Memory namespace (default: 'long-term')
+ */
+export async function webSkillize(
+  options: Partial<UnifiedPipelineConfig> & { mode: PipelineMode }
+): Promise<WebSkillResult> {
+  try {
+    const result = await runUnifiedPipelineCore(options);
+
+    if (!result.success) {
+      if (result.requireHuman) {
+        return {
+          success: false,
+          action: 'require_human',
+          error: result.error,
+          data: {
+            instruction: result.humanInstruction,
+          },
+        };
+      }
+      return {
+        success: false,
+        error: result.error,
+      };
+    }
+
+    return {
+      success: true,
+      action: 'allow',
+      refId: result.refId,
+      summary: result.summary,
+      data: {
+        refId: result.refId,
+        mode: result.mode,
+        message: `Pipeline complete (mode=${result.mode}). Use memory_search("${result.refId}") for run record.`,
+      },
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: `pipeline.web_skillize failed: ${err instanceof Error ? err.message : String(err)}`,
     };
   }
 }
