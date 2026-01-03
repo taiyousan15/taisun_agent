@@ -19,4 +19,5 @@ export {
   batchSkillizeUrlBundle,
   batchSkillizePreview,
   webSkillizeFromTabs,
+  webSkillize,
 } from './skills';

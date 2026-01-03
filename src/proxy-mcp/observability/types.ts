@@ -19,6 +19,7 @@ export type EventType =
   | 'memory_search'
   | 'url_bundle_normalize'
   | 'pipeline_tabs_skillize'
+  | 'pipeline_unified_skillize'
   | 'error';
 
 /**
