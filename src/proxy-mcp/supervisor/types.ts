@@ -68,6 +68,8 @@ export interface ExecutionPlan {
   estimatedRisk: 'low' | 'medium' | 'high' | 'critical';
   requiresApproval: boolean;
   approvalReason?: string;
+  /** SHA-256 hash of JSON.stringify(steps) for approval binding */
+  planHash?: string;
 }
 
 /**
@@ -91,6 +93,10 @@ export interface ApprovalStatus {
   approvedBy?: string;
   approvedAt?: string;
   reason?: string;
+  /** Plan hash that was approved (must match ExecutionPlan.planHash) */
+  approvedPlanHash?: string;
+  /** Expiry time for this approval (ISO string) */
+  expiresAt?: string;
 }
 
 /**

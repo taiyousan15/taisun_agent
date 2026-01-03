@@ -21,6 +21,7 @@
     "lint:fix": "eslint src/ tests/ --fix",
     "typecheck": "tsc --noEmit",
     "security:scan": "trivy fs --severity HIGH,CRITICAL .",
+    "security:secrets-scan": "npx ts-node scripts/security/secrets-scan.ts",
     "docs:generate": "typedoc src/",
     "memory:update": "node scripts/update-memory-stats.js",
     "memory:report": "npx ts-node scripts/memory-report.ts",

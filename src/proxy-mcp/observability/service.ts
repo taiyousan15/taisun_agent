@@ -13,6 +13,7 @@ import {
   MetricsSummary,
   EventFilter,
 } from './types';
+import { redactObject } from '../security';
 
 const EVENTS_DIR = path.join(process.cwd(), '.taisun', 'observability');
 const EVENTS_FILE = path.join(EVENTS_DIR, 'events.jsonl');
@@ -49,12 +50,15 @@ export function recordEvent(
 ): ObservabilityEvent {
   ensureInitialized();
 
+  // Redact secrets from options before recording
+  const redactedOptions = redactObject(options);
+
   const event: ObservabilityEvent = {
     timestamp: new Date().toISOString(),
     type,
     runId,
     status,
-    ...options,
+    ...redactedOptions,
   };
 
   // Add to buffer

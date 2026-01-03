@@ -251,7 +251,62 @@ npm audit
 
 # Trivy (要インストール)
 npm run security:scan
+
+# Secrets スキャン
+npm run security:secrets-scan
 ```
+
+## Security & Governance
+
+### Secrets Guard
+
+機密情報（APIキー、トークン等）の自動検出と秘匿化を行います。
+
+```typescript
+import { redactSecrets, redactObject } from './src/proxy-mcp/security';
+
+// 文字列からシークレットを秘匿化
+const safe = redactSecrets('API key: sk-abc123...');
+// → 'API key: [REDACTED:OPENAI_KEY]'
+
+// オブジェクト全体を再帰的に秘匿化
+const safeData = redactObject({ token: 'ghp_xxx...' });
+```
+
+対応プロバイダー: GitHub, AWS, Slack, OpenAI, Stripe, Notion, Google等
+
+### Policy-as-Code
+
+セキュリティポリシーをJSONで定義し、危険な操作を制御します。
+
+```json
+// config/proxy-mcp/policy.json
+{
+  "safetyRules": [
+    {
+      "category": "deployment",
+      "keywords": ["deploy", "production"],
+      "action": "require_human",
+      "riskLevel": "critical"
+    }
+  ]
+}
+```
+
+アクション:
+- `allow` - 自動実行
+- `require_human` - 人間の承認が必要
+- `deny` - 実行をブロック
+
+### Approval Binding
+
+承認が特定のプランに紐付けられ、プラン改ざん攻撃を防止します。
+
+- **Plan Hash**: 実行プランのSHA-256ハッシュ
+- **TTL**: 承認の有効期限（デフォルト24時間）
+- **Attack Prevention**: プラン置換・ステップ改ざんを検出
+
+詳細は [docs/third-agent/37_SECURITY_POLICY_APPROVAL.md](docs/third-agent/37_SECURITY_POLICY_APPROVAL.md) を参照してください。
 
 ## ライセンス
 

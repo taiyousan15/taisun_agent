@@ -1,0 +1,85 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-01-03T00:00:00.000Z",
+  "safetyRules": [
+    {
+      "category": "deployment",
+      "description": "Production deployment operations require human approval",
+      "keywords": ["deploy", "production", "release", "publish", "rollout"],
+      "patterns": ["deploy\\s+to\\s+prod", "push\\s+to\\s+production", "release\\s+v\\d"],
+      "action": "require_human",
+      "riskLevel": "critical"
+    },
+    {
+      "category": "destructive",
+      "description": "Data deletion operations require human approval",
+      "keywords": ["delete", "drop", "truncate", "remove", "destroy", "wipe"],
+      "patterns": ["drop\\s+table", "delete\\s+all", "rm\\s+-rf", "truncate\\s+table"],
+      "action": "require_human",
+      "riskLevel": "critical"
+    },
+    {
+      "category": "secrets",
+      "description": "Secret/credential operations require human approval",
+      "keywords": ["secret", "credential", "password", "token", "api_key", "private_key"],
+      "patterns": ["rotate\\s+(secret|key|token)", "update\\s+credential"],
+      "action": "require_human",
+      "riskLevel": "high"
+    },
+    {
+      "category": "billing",
+      "description": "Billing/payment operations require human approval",
+      "keywords": ["billing", "payment", "invoice", "subscription", "charge"],
+      "patterns": ["cancel\\s+subscription", "change\\s+plan", "update\\s+billing"],
+      "action": "require_human",
+      "riskLevel": "high"
+    },
+    {
+      "category": "access_control",
+      "description": "Access control operations require human approval",
+      "keywords": ["permission", "role", "access", "admin", "sudo", "root"],
+      "patterns": ["grant\\s+admin", "change\\s+role", "elevate\\s+privilege"],
+      "action": "require_human",
+      "riskLevel": "medium"
+    },
+    {
+      "category": "automation_abuse",
+      "description": "Automation abuse patterns are denied",
+      "keywords": ["captcha", "bypass", "scrape", "spam", "flood"],
+      "patterns": ["bypass\\s+captcha", "mass\\s+scrape", "automated\\s+login"],
+      "action": "deny",
+      "riskLevel": "critical"
+    }
+  ],
+  "dangerousPatterns": {
+    "critical": [
+      "deploy",
+      "production",
+      "delete",
+      "drop",
+      "destroy",
+      "wipe"
+    ],
+    "high": [
+      "secret",
+      "credential",
+      "api_key",
+      "password",
+      "token",
+      "billing",
+      "payment"
+    ],
+    "medium": [
+      "admin",
+      "role",
+      "permission",
+      "remove"
+    ]
+  },
+  "overrides": [],
+  "defaults": {
+    "defaultAction": "allow",
+    "approvalTtlHours": 24,
+    "requirePlanHash": true
+  }
+}
