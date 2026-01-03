@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://taisun.dev/schemas/slo-scheduler.json",
+  "title": "SLO Scheduler Configuration",
+  "description": "Configuration for the SLO check scheduler daemon",
+  "type": "object",
+  "required": ["version", "scheduler"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Configuration version"
+    },
+    "scheduler": {
+      "type": "object",
+      "description": "Scheduler settings",
+      "required": ["intervalSeconds"],
+      "properties": {
+        "intervalSeconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 86400,
+          "default": 300,
+          "description": "Interval between SLO checks in seconds"
+        },
+        "cooldown": {
+          "type": "object",
+          "description": "Cooldown settings to prevent alert spam",
+          "properties": {
+            "warnMinutes": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 120,
+              "description": "Minimum minutes between WARN alerts"
+            },
+            "criticalMinutes": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 30,
+              "description": "Minimum minutes between CRITICAL alerts"
+            }
+          }
+        },
+        "postOnRecovery": {
+          "type": "boolean",
+          "default": true,
+          "description": "Post alert when status returns to OK"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable the scheduler"
+        }
+      }
+    },
+    "alerts": {
+      "type": "object",
+      "description": "Alert posting configuration",
+      "properties": {
+        "targetIssueNumber": {
+          "type": ["integer", "null"],
+          "description": "GitHub issue number to post comments to"
+        },
+        "owner": {
+          "type": "string",
+          "description": "GitHub repository owner"
+        },
+        "repo": {
+          "type": "string",
+          "description": "GitHub repository name"
+        }
+      }
+    },
+    "stateFile": {
+      "type": "string",
+      "description": "Path to state file for persistence"
+    }
+  }
+}

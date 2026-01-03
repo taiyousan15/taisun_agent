@@ -26,6 +26,7 @@
 | [19_CHECKLIST_ONE_COMMAND_PIPELINE.md](./19_CHECKLIST_ONE_COMMAND_PIPELINE.md) | One-Command Pipelineチェックリスト |
 | [25_CHECKLIST_OPS_AUTOMATION_JOBS.md](./25_CHECKLIST_OPS_AUTOMATION_JOBS.md) | P13 Ops Automationチェックリスト |
 | [26_CHECKLIST_SLO_ALERTS.md](./26_CHECKLIST_SLO_ALERTS.md) | P14 SLO & Alertsチェックリスト |
+| [27_CHECKLIST_SLO_SCHEDULER.md](./27_CHECKLIST_SLO_SCHEDULER.md) | P15 SLO Schedulerチェックリスト |
 
 ### Technical Docs (20-)
 | File | Description |
@@ -51,6 +52,7 @@
 | [39_DLQ_TRIAGE.md](./39_DLQ_TRIAGE.md) | DLQトリアージガイド |
 | [40_OPS_AUTOMATION_JOBS.md](./40_OPS_AUTOMATION_JOBS.md) | P13 Ops Automation設計 |
 | [41_SLO_ALERTS.md](./41_SLO_ALERTS.md) | P14 SLO & Alerts設計 |
+| [42_SLO_SCHEDULER.md](./42_SLO_SCHEDULER.md) | P15 SLO Scheduler設計 |
 
 ## 最低限のルール（毎回これだけは守る）
 

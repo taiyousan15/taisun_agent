@@ -50,7 +50,9 @@
     "chrome:cdp:smoke": "node dist/proxy-mcp/browser/cdp/cdp-smoke-cli.js",
     "jobs:dlq:triage": "npx ts-node scripts/jobs/dlq-triage.ts",
     "ops:slo:check": "npx ts-node scripts/ops/slo-check.ts",
-    "ops:slo:check:post": "npx ts-node scripts/ops/slo-check.ts --post"
+    "ops:slo:check:post": "npx ts-node scripts/ops/slo-check.ts --post",
+    "ops:slo:scheduler": "npx ts-node scripts/ops/slo-scheduler.ts",
+    "ops:slo:scheduler:loop": "npx ts-node scripts/ops/slo-scheduler.ts --loop"
   },
   "keywords": [
     "ai",
