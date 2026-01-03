@@ -1,0 +1,414 @@
+{
+  "$schema": "./internal-mcps.schema.json",
+  "_comment": "Auto-generated disabled stubs from MCP catalog. Copy entries to internal-mcps.local.json and enable via Phase 6 rollout.",
+  "puppeteer-mcp": {
+    "displayName": "Puppeteer",
+    "description": "Browser automation with Puppeteer",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@anthropic/mcp-server-puppeteer"
+    ],
+    "enabled": false,
+    "timeout": 30000,
+    "retry": {
+      "maxAttempts": 3,
+      "delayMs": 1000
+    },
+    "requiredEnv": [],
+    "tags": [
+      "catalog:puppeteer-mcp",
+      "risk:low"
+    ],
+    "requireHuman": false,
+    "_catalogMetadata": {
+      "entryId": "puppeteer-mcp",
+      "riskLevel": "low",
+      "generatedAt": "2026-01-03T06:58:47.577Z"
+    }
+  },
+  "playwright-mcp": {
+    "displayName": "Playwright",
+    "description": "Browser automation with Playwright",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@anthropic/mcp-server-playwright"
+    ],
+    "enabled": false,
+    "timeout": 30000,
+    "retry": {
+      "maxAttempts": 3,
+      "delayMs": 1000
+    },
+    "requiredEnv": [],
+    "tags": [
+      "catalog:playwright-mcp",
+      "risk:low"
+    ],
+    "requireHuman": false,
+    "_catalogMetadata": {
+      "entryId": "playwright-mcp",
+      "riskLevel": "low",
+      "generatedAt": "2026-01-03T06:58:47.577Z"
+    }
+  },
+  "filesystem-mcp": {
+    "displayName": "Filesystem",
+    "description": "File system operations",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@anthropic/mcp-server-filesystem"
+    ],
+    "enabled": false,
+    "timeout": 30000,
+    "retry": {
+      "maxAttempts": 3,
+      "delayMs": 1000
+    },
+    "requiredEnv": [],
+    "tags": [
+      "catalog:filesystem-mcp",
+      "risk:low"
+    ],
+    "requireHuman": false,
+    "_catalogMetadata": {
+      "entryId": "filesystem-mcp",
+      "riskLevel": "low",
+      "generatedAt": "2026-01-03T06:58:47.577Z"
+    }
+  },
+  "memory-mcp": {
+    "displayName": "Memory",
+    "description": "In-memory key-value storage",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@anthropic/mcp-server-memory"
+    ],
+    "enabled": false,
+    "timeout": 30000,
+    "retry": {
+      "maxAttempts": 3,
+      "delayMs": 1000
+    },
+    "requiredEnv": [],
+    "tags": [
+      "catalog:memory-mcp",
+      "risk:high"
+    ],
+    "requireHuman": true,
+    "_catalogMetadata": {
+      "entryId": "memory-mcp",
+      "riskLevel": "high",
+      "generatedAt": "2026-01-03T06:58:47.577Z"
+    }
+  },
+  "postgres-mcp": {
+    "displayName": "Postgres",
+    "description": "PostgreSQL database integration",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@anthropic/mcp-server-postgres"
+    ],
+    "enabled": false,
+    "timeout": 30000,
+    "retry": {
+      "maxAttempts": 3,
+      "delayMs": 1000
+    },
+    "requiredEnv": [
+      {
+        "name": "POSTGRES_DATABASE_URL",
+        "description": "Required for Postgres"
+      },
+      {
+        "name": "POSTGRES_CONNECTION_STRING",
+        "description": "Required for Postgres"
+      }
+    ],
+    "tags": [
+      "catalog:postgres-mcp",
+      "risk:medium"
+    ],
+    "requireHuman": false,
+    "_catalogMetadata": {
+      "entryId": "postgres-mcp",
+      "riskLevel": "medium",
+      "generatedAt": "2026-01-03T06:58:47.577Z"
+    }
+  },
+  "sqlite-mcp": {
+    "displayName": "Sqlite",
+    "description": "SQLite database integration",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@anthropic/mcp-server-sqlite"
+    ],
+    "enabled": false,
+    "timeout": 30000,
+    "retry": {
+      "maxAttempts": 3,
+      "delayMs": 1000
+    },
+    "requiredEnv": [
+      {
+        "name": "SQLITE_DATABASE_URL",
+        "description": "Required for Sqlite"
+      },
+      {
+        "name": "SQLITE_CONNECTION_STRING",
+        "description": "Required for Sqlite"
+      }
+    ],
+    "tags": [
+      "catalog:sqlite-mcp",
+      "risk:medium"
+    ],
+    "requireHuman": false,
+    "_catalogMetadata": {
+      "entryId": "sqlite-mcp",
+      "riskLevel": "medium",
+      "generatedAt": "2026-01-03T06:58:47.577Z"
+    }
+  },
+  "fetch-mcp": {
+    "displayName": "Fetch",
+    "description": "HTTP fetch operations",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@anthropic/mcp-server-fetch"
+    ],
+    "enabled": false,
+    "timeout": 30000,
+    "retry": {
+      "maxAttempts": 3,
+      "delayMs": 1000
+    },
+    "requiredEnv": [
+      {
+        "name": "FETCH_API_KEY",
+        "description": "Required for Fetch"
+      }
+    ],
+    "tags": [
+      "catalog:fetch-mcp",
+      "risk:low"
+    ],
+    "requireHuman": false,
+    "_catalogMetadata": {
+      "entryId": "fetch-mcp",
+      "riskLevel": "low",
+      "generatedAt": "2026-01-03T06:58:47.577Z"
+    }
+  },
+  "brave-search-mcp": {
+    "displayName": "Brave Search",
+    "description": "Brave Search API",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@anthropic/mcp-server-brave-search"
+    ],
+    "enabled": false,
+    "timeout": 30000,
+    "retry": {
+      "maxAttempts": 3,
+      "delayMs": 1000
+    },
+    "requiredEnv": [
+      {
+        "name": "BRAVE_SEARCH_API_KEY",
+        "description": "Required for Brave Search"
+      }
+    ],
+    "tags": [
+      "catalog:brave-search-mcp",
+      "risk:low"
+    ],
+    "requireHuman": false,
+    "_catalogMetadata": {
+      "entryId": "brave-search-mcp",
+      "riskLevel": "low",
+      "generatedAt": "2026-01-03T06:58:47.577Z"
+    }
+  },
+  "github-mcp": {
+    "displayName": "Github",
+    "description": "GitHub integration",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@anthropic/mcp-server-github"
+    ],
+    "enabled": false,
+    "timeout": 30000,
+    "retry": {
+      "maxAttempts": 3,
+      "delayMs": 1000
+    },
+    "requiredEnv": [
+      {
+        "name": "GITHUB_TOKEN",
+        "description": "Required for Github"
+      },
+      {
+        "name": "GITHUB_API_KEY",
+        "description": "Required for Github"
+      }
+    ],
+    "tags": [
+      "catalog:github-mcp",
+      "risk:low"
+    ],
+    "requireHuman": false,
+    "_catalogMetadata": {
+      "entryId": "github-mcp",
+      "riskLevel": "low",
+      "generatedAt": "2026-01-03T06:58:47.577Z"
+    }
+  },
+  "git-mcp": {
+    "displayName": "Git",
+    "description": "Git operations",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@anthropic/mcp-server-git"
+    ],
+    "enabled": false,
+    "timeout": 30000,
+    "retry": {
+      "maxAttempts": 3,
+      "delayMs": 1000
+    },
+    "requiredEnv": [
+      {
+        "name": "GIT_TOKEN",
+        "description": "Required for Git"
+      },
+      {
+        "name": "GIT_API_KEY",
+        "description": "Required for Git"
+      }
+    ],
+    "tags": [
+      "catalog:git-mcp",
+      "risk:low"
+    ],
+    "requireHuman": false,
+    "_catalogMetadata": {
+      "entryId": "git-mcp",
+      "riskLevel": "low",
+      "generatedAt": "2026-01-03T06:58:47.577Z"
+    }
+  },
+  "aws-mcp": {
+    "displayName": "Aws",
+    "description": "AWS cloud operations (requires credentials)",
+    "command": "npx",
+    "args": [
+      "-y",
+      "aws-mcp"
+    ],
+    "enabled": false,
+    "timeout": 30000,
+    "retry": {
+      "maxAttempts": 3,
+      "delayMs": 1000
+    },
+    "requiredEnv": [
+      {
+        "name": "AWS_API_KEY",
+        "description": "Required for Aws"
+      },
+      {
+        "name": "AWS_ACCESS_KEY",
+        "description": "Required for Aws"
+      },
+      {
+        "name": "AWS_SECRET_KEY",
+        "description": "Required for Aws"
+      }
+    ],
+    "tags": [
+      "catalog:aws-mcp",
+      "risk:medium"
+    ],
+    "requireHuman": false,
+    "_catalogMetadata": {
+      "entryId": "aws-mcp",
+      "riskLevel": "medium",
+      "generatedAt": "2026-01-03T06:58:47.577Z"
+    }
+  },
+  "docker-mcp": {
+    "displayName": "Docker",
+    "description": "Docker container management",
+    "command": "npx",
+    "args": [
+      "-y",
+      "docker-mcp"
+    ],
+    "enabled": false,
+    "timeout": 30000,
+    "retry": {
+      "maxAttempts": 3,
+      "delayMs": 1000
+    },
+    "requiredEnv": [
+      {
+        "name": "DOCKER_API_KEY",
+        "description": "Required for Docker"
+      },
+      {
+        "name": "DOCKER_ACCESS_KEY",
+        "description": "Required for Docker"
+      },
+      {
+        "name": "DOCKER_SECRET_KEY",
+        "description": "Required for Docker"
+      }
+    ],
+    "tags": [
+      "catalog:docker-mcp",
+      "risk:low"
+    ],
+    "requireHuman": false,
+    "_catalogMetadata": {
+      "entryId": "docker-mcp",
+      "riskLevel": "low",
+      "generatedAt": "2026-01-03T06:58:47.577Z"
+    }
+  },
+  "shell-exec-mcp": {
+    "displayName": "Shell Exec",
+    "description": "Execute arbitrary shell commands",
+    "command": "npx",
+    "args": [
+      "-y",
+      "shell-exec-mcp"
+    ],
+    "enabled": false,
+    "timeout": 30000,
+    "retry": {
+      "maxAttempts": 3,
+      "delayMs": 1000
+    },
+    "requiredEnv": [],
+    "tags": [
+      "catalog:shell-exec-mcp",
+      "risk:high"
+    ],
+    "requireHuman": true,
+    "_catalogMetadata": {
+      "entryId": "shell-exec-mcp",
+      "riskLevel": "high",
+      "generatedAt": "2026-01-03T06:58:47.577Z"
+    }
+  }
+}
