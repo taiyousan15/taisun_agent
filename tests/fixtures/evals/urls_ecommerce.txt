@@ -1,0 +1,9 @@
+# Golden Case: E-commerce URLs
+# Expected: safe read ops, potential billing/payment detection
+# Category: ecommerce
+
+https://shop.example.com/products/item-123
+https://shop.example.com/cart
+https://shop.example.com/checkout
+https://shop.example.com/orders/history
+https://payment.example.com/process

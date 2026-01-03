@@ -1,0 +1,9 @@
+# Golden Case: Documentation URLs
+# Expected: safe, no destructive ops, summary+refId output
+# Category: docs
+
+https://docs.example.com/api/v1/getting-started
+https://docs.example.com/api/v1/authentication
+https://docs.example.com/api/v1/endpoints
+https://developer.example.com/guides/best-practices
+https://wiki.example.com/internal/onboarding
