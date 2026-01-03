@@ -1,0 +1,19 @@
+{
+  "$schema": "./slo-scheduler.schema.json",
+  "version": "1.0.0",
+  "scheduler": {
+    "intervalSeconds": 300,
+    "cooldown": {
+      "warnMinutes": 120,
+      "criticalMinutes": 30
+    },
+    "postOnRecovery": true,
+    "enabled": true
+  },
+  "alerts": {
+    "targetIssueNumber": null,
+    "owner": "taiyousan15",
+    "repo": "taisun_agent"
+  },
+  "stateFile": ".taisun/slo-scheduler-state.json"
+}

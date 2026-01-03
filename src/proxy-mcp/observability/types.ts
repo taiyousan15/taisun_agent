@@ -24,6 +24,10 @@ export type EventType =
   | 'job_succeeded'
   | 'job_failed'
   | 'job_dlq'
+  | 'slo_checked'
+  | 'slo_alert_posted'
+  | 'slo_alert_suppressed'
+  | 'slo_recovered'
   | 'error';
 
 /**
