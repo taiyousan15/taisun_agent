@@ -22,6 +22,8 @@
 | [15_CHECKLIST_OBS_REPORT.md](./15_CHECKLIST_OBS_REPORT.md) | 観測レポート運用チェックリスト |
 | [16_CHECKLIST_CHROME_EXTENSIONS.md](./16_CHECKLIST_CHROME_EXTENSIONS.md) | Chrome拡張（専用プロファイル）運用チェックリスト |
 | [17_CHECKLIST_PLAYWRIGHT_CDP.md](./17_CHECKLIST_PLAYWRIGHT_CDP.md) | Playwright CDP Session Reuseチェックリスト |
+| [18_CHECKLIST_URL_BUNDLE_PIPELINE.md](./18_CHECKLIST_URL_BUNDLE_PIPELINE.md) | URL Bundle Pipelineチェックリスト |
+| [19_CHECKLIST_ONE_COMMAND_PIPELINE.md](./19_CHECKLIST_ONE_COMMAND_PIPELINE.md) | One-Command Pipelineチェックリスト |
 
 ### Technical Docs (20-)
 | File | Description |
@@ -42,6 +44,8 @@
 |------|-------------|
 | [30_CHROME_EXTENSIONS_OPS.md](./30_CHROME_EXTENSIONS_OPS.md) | Chrome拡張（専用プロファイル）運用手順 |
 | [31_PLAYWRIGHT_CDP_SESSION_REUSE.md](./31_PLAYWRIGHT_CDP_SESSION_REUSE.md) | Playwright CDP Session Reuse運用手順 |
+| [32_URL_BUNDLE_PIPELINE.md](./32_URL_BUNDLE_PIPELINE.md) | URL Bundle Pipeline設計 |
+| [33_ONE_COMMAND_PIPELINE.md](./33_ONE_COMMAND_PIPELINE.md) | One-Command Pipeline設計 |
 
 ## 最低限のルール（毎回これだけは守る）
 
