@@ -2,6 +2,7 @@
  * Proxy MCP Unit Tests
  */
 
+import { describe, it, expect, beforeEach } from 'vitest';
 import { systemHealth } from '../../src/proxy-mcp/tools/system';
 import { memoryAdd, memorySearch, memoryStats, memoryClearShortTerm, memoryClearAll } from '../../src/proxy-mcp/tools/memory';
 import { skillSearch, skillRun } from '../../src/proxy-mcp/tools/skill';
@@ -9,8 +10,8 @@ import { MemoryService } from '../../src/proxy-mcp/memory';
 
 describe('Proxy MCP', () => {
   describe('system.health', () => {
-    it('should return healthy status', () => {
-      const result = systemHealth();
+    it('should return healthy status', async () => {
+      const result = await systemHealth();
 
       expect(result.success).toBe(true);
       expect(result.data).toBeDefined();
@@ -20,8 +21,8 @@ describe('Proxy MCP', () => {
       expect((result.data as { timestamp: string }).timestamp).toBeDefined();
     });
 
-    it('should include circuit breaker status', () => {
-      const result = systemHealth();
+    it('should include circuit breaker status', async () => {
+      const result = await systemHealth();
 
       expect(result.data).toBeDefined();
       const data = result.data as { circuits: { total: number; closed: number; open: number; halfOpen: number } };
@@ -32,14 +33,67 @@ describe('Proxy MCP', () => {
       expect(typeof data.circuits.halfOpen).toBe('number');
     });
 
-    it('should include rollout status', () => {
-      const result = systemHealth();
+    it('should include rollout status', async () => {
+      const result = await systemHealth();
 
       expect(result.data).toBeDefined();
       const data = result.data as { rollout: { overlayActive: boolean; mcps: unknown[] } };
       expect(data.rollout).toBeDefined();
       expect(typeof data.rollout.overlayActive).toBe('boolean');
       expect(Array.isArray(data.rollout.mcps)).toBe(true);
+    });
+
+    it('should include jobs section when integration registered (P12)', async () => {
+      // Import and register jobs integration
+      const { registerJobsIntegration } = await import('../../src/proxy-mcp/tools/system');
+
+      registerJobsIntegration({
+        getJobStats: async () => ({
+          queued: 5,
+          running: 2,
+          waiting_approval: 1,
+          succeeded: 100,
+          failed: 3,
+          canceled: 2,
+          total: 113,
+        }),
+        getQueueStats: async () => ({
+          queued: 5,
+          running: 2,
+          dlq: 1,
+          backpressureActive: false,
+          utilizationPercent: 50,
+        }),
+        getWorkerStats: () => ({
+          processed: 100,
+          succeeded: 95,
+          failed: 5,
+          waitingApproval: 1,
+          currentJob: null,
+          uptimeMs: 60000,
+        }),
+      });
+
+      const result = await systemHealth();
+
+      expect(result.data).toBeDefined();
+      const data = result.data as {
+        jobs: {
+          store: { queued: number; running: number; total: number };
+          queue: { backpressureActive: boolean; dlq: number };
+          worker: { processed: number };
+        };
+      };
+      expect(data.jobs).toBeDefined();
+      expect(data.jobs.store.queued).toBe(5);
+      expect(data.jobs.store.running).toBe(2);
+      expect(data.jobs.store.total).toBe(113);
+      expect(data.jobs.queue.backpressureActive).toBe(false);
+      expect(data.jobs.queue.dlq).toBe(1);
+      expect(data.jobs.worker.processed).toBe(100);
+
+      // Clean up
+      registerJobsIntegration(null);
     });
   });
 

@@ -1,0 +1,28 @@
+{
+  "$schema": "../../schemas/jobs-config.schema.json",
+  "store": {
+    "type": "jsonl",
+    "filePath": "./data/jobs.jsonl",
+    "autoSaveIntervalMs": 5000
+  },
+  "queue": {
+    "maxConcurrent": 3,
+    "maxQueueSize": 100,
+    "backpressureThreshold": 80
+  },
+  "worker": {
+    "pollIntervalMs": 1000,
+    "maxAttempts": 3,
+    "retryDelayMs": 5000
+  },
+  "approval": {
+    "defaultTtlHours": 24,
+    "pollIntervalMs": 30000,
+    "expiryWarningHours": 1
+  },
+  "dlq": {
+    "enabled": true,
+    "maxSize": 1000,
+    "retentionDays": 30
+  }
+}
