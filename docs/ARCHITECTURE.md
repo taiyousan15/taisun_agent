@@ -153,6 +153,19 @@ success_rate_threshold:
   warning: 0.50
 ```
 
+### 6. Jobs System（ジョブ層） - P12
+
+Durable job execution with queue management, backpressure, and approval handling.
+
+| Component | Description |
+|-----------|-------------|
+| JobStoreService | Persistent job tracking (inmemory/jsonl) |
+| JobQueue | Queue with backpressure and DLQ |
+| JobWorker | Executor with dry-run support |
+| ApprovalWatcher | GitHub-based approval polling |
+
+詳細: [Jobs Architecture](jobs-architecture.md) | [Jobs Runbook](jobs-runbook.md)
+
 ## データフロー
 
 ### 1. リクエスト処理フロー
