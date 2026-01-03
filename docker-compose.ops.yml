@@ -1,0 +1,62 @@
+# TAISUN v2 - Operations Stack (P16)
+# Apprise Notifications + SLO Scheduler
+
+version: '3.8'
+
+services:
+  # Apprise - Unified Notification Gateway
+  # Docs: https://github.com/caronc/apprise-api
+  apprise:
+    image: caronc/apprise:latest
+    container_name: taisun-apprise
+    restart: unless-stopped
+    ports:
+      - "${APPRISE_PORT:-8000}:8000"
+    environment:
+      # Enable stateless mode (no persistent config)
+      - APPRISE_STATELESS_URLS=${APPRISE_URLS:-}
+      # Debug mode (set to 1 for troubleshooting)
+      - APPRISE_DEBUG=${APPRISE_DEBUG:-0}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - taisun-ops
+    labels:
+      - "taisun.component=notifications"
+      - "taisun.phase=p16"
+
+  # SLO Scheduler (runs periodic SLO checks)
+  # This is optional - can run manually instead
+  slo-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.scheduler
+    container_name: taisun-slo-scheduler
+    restart: unless-stopped
+    environment:
+      - APPRISE_URL=http://apprise:8000/notify
+      - JOBS_DIR=/app/.taisun/jobs
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - NODE_ENV=production
+    volumes:
+      - ./config:/app/config:ro
+      - ./.taisun:/app/.taisun
+    depends_on:
+      apprise:
+        condition: service_healthy
+    networks:
+      - taisun-ops
+    labels:
+      - "taisun.component=slo-scheduler"
+      - "taisun.phase=p16"
+    # Run every 5 minutes
+    profiles:
+      - scheduler
+
+networks:
+  taisun-ops:
+    driver: bridge
+    name: taisun-ops-network
