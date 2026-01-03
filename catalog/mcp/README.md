@@ -50,7 +50,7 @@ npm run catalog:stubs -- --top 20
 - **NEVER** auto-enable from catalog
 - **ALWAYS** use Phase 6 rollout for production enablement
 - **NEVER** commit real API keys/tokens
-- See docs/third-agent/35_MCP_CATALOG_GOVERNANCE.md for details
+- See docs/third-agent/35_TOOL_GOVERNANCE_CATALOG.md for details
 
 ## Files
 
