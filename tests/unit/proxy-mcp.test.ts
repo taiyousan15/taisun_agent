@@ -2,7 +2,7 @@
  * Proxy MCP Unit Tests
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+// Jest - no import needed for describe, it, expect, beforeEach
 import { systemHealth } from '../../src/proxy-mcp/tools/system';
 import { memoryAdd, memorySearch, memoryStats, memoryClearShortTerm, memoryClearAll } from '../../src/proxy-mcp/tools/memory';
 import { skillSearch, skillRun } from '../../src/proxy-mcp/tools/skill';

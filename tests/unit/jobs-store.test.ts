@@ -4,7 +4,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+// Jest - no import needed for describe, it, expect, beforeEach, afterEach
 import {
   JobStoreService,
   generateJobId,

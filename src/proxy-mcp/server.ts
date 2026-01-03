@@ -131,7 +131,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   switch (name) {
     case 'system_health':
-      result = systemHealth();
+      result = await systemHealth();
       break;
 
     case 'skill_search':

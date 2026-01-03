@@ -19,6 +19,11 @@ export type EventType =
   | 'memory_search'
   | 'url_bundle_normalize'
   | 'pipeline_tabs_skillize'
+  | 'job_created'
+  | 'job_started'
+  | 'job_succeeded'
+  | 'job_failed'
+  | 'job_dlq'
   | 'error';
 
 /**

@@ -2,7 +2,7 @@
  * Job Worker Tests - P12
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+// Jest - no import needed for describe, it, expect, beforeEach, afterEach (use jest instead of vi)
 import { JobWorker, JobExecutor, createSupervisorExecutor } from '../../src/proxy-mcp/jobs/worker';
 import { JobQueue } from '../../src/proxy-mcp/jobs/queue';
 import { JobStoreService } from '../../src/proxy-mcp/jobs/store';
@@ -55,7 +55,7 @@ describe('JobWorker', () => {
 
   describe('executeOnce', () => {
     it('should execute a single job', async () => {
-      const executor: JobExecutor = vi.fn().mockResolvedValue({
+      const executor: JobExecutor = jest.fn().mockResolvedValue({
         success: true,
         result: { success: true, summary: 'Test done' },
       });
@@ -101,7 +101,7 @@ describe('JobWorker', () => {
 
   describe('dry-run mode', () => {
     it('should pass dryRun flag to executor', async () => {
-      const executor: JobExecutor = vi.fn().mockImplementation((job, options) => {
+      const executor: JobExecutor = jest.fn().mockImplementation((job, options) => {
         // Executor should receive dryRun=true
         if (options.dryRun) {
           return Promise.resolve({
@@ -149,7 +149,7 @@ describe('JobWorker', () => {
 
   describe('approval handling', () => {
     it('should handle jobs needing approval', async () => {
-      const executor: JobExecutor = vi.fn().mockResolvedValue({
+      const executor: JobExecutor = jest.fn().mockResolvedValue({
         success: true,
         needsApproval: 123,
       });
@@ -172,7 +172,7 @@ describe('JobWorker', () => {
 
   describe('error handling', () => {
     it('should handle executor errors', async () => {
-      const executor: JobExecutor = vi.fn().mockRejectedValue(new Error('Executor failed'));
+      const executor: JobExecutor = jest.fn().mockRejectedValue(new Error('Executor failed'));
 
       worker = new JobWorker(queue, store, {}, executor);
 
@@ -190,7 +190,7 @@ describe('JobWorker', () => {
     });
 
     it('should handle executor returning failure', async () => {
-      const executor: JobExecutor = vi.fn().mockResolvedValue({
+      const executor: JobExecutor = jest.fn().mockResolvedValue({
         success: false,
         error: 'Task failed',
       });
@@ -210,7 +210,7 @@ describe('JobWorker', () => {
 
   describe('getStats', () => {
     it('should track worker statistics', async () => {
-      const executor: JobExecutor = vi.fn().mockResolvedValue({
+      const executor: JobExecutor = jest.fn().mockResolvedValue({
         success: true,
         result: { success: true, summary: 'Done' },
       });
@@ -242,7 +242,7 @@ describe('JobWorker', () => {
 
   describe('polling', () => {
     it('should process jobs via polling', async () => {
-      const executor: JobExecutor = vi.fn().mockResolvedValue({
+      const executor: JobExecutor = jest.fn().mockResolvedValue({
         success: true,
         result: { success: true, summary: 'Polled' },
       });
@@ -266,7 +266,7 @@ describe('JobWorker', () => {
 
     it('should emit events during processing', async () => {
       const events: string[] = [];
-      const executor: JobExecutor = vi.fn().mockResolvedValue({
+      const executor: JobExecutor = jest.fn().mockResolvedValue({
         success: true,
         result: { success: true, summary: 'Events' },
       });
@@ -293,7 +293,7 @@ describe('JobWorker', () => {
 
 describe('createSupervisorExecutor', () => {
   it('should create a supervisor executor', async () => {
-    const supervisorRunner = vi.fn().mockResolvedValue({
+    const supervisorRunner = jest.fn().mockResolvedValue({
       success: true,
       summary: 'Supervisor done',
       refId: 'ref-123',
@@ -324,7 +324,7 @@ describe('createSupervisorExecutor', () => {
   });
 
   it('should handle supervisor returning issueId (needs approval)', async () => {
-    const supervisorRunner = vi.fn().mockResolvedValue({
+    const supervisorRunner = jest.fn().mockResolvedValue({
       success: true,
       summary: 'Needs approval',
       issueId: 456,
@@ -352,7 +352,7 @@ describe('createSupervisorExecutor', () => {
   });
 
   it('should skip in dry-run mode', async () => {
-    const supervisorRunner = vi.fn();
+    const supervisorRunner = jest.fn();
 
     const executor = createSupervisorExecutor(supervisorRunner);
 
@@ -378,7 +378,7 @@ describe('createSupervisorExecutor', () => {
   });
 
   it('should handle supervisor errors', async () => {
-    const supervisorRunner = vi.fn().mockRejectedValue(new Error('Supervisor error'));
+    const supervisorRunner = jest.fn().mockRejectedValue(new Error('Supervisor error'));
 
     const executor = createSupervisorExecutor(supervisorRunner);
 

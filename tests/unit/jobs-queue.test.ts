@@ -2,7 +2,7 @@
  * Job Queue Tests - P12
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+// Jest - no import needed for describe, it, expect, beforeEach, afterEach
 import { JobQueue } from '../../src/proxy-mcp/jobs/queue';
 import { JobStoreService } from '../../src/proxy-mcp/jobs/store';
 import type { Job } from '../../src/proxy-mcp/jobs/types';

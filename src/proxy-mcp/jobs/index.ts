@@ -34,3 +34,12 @@ export type {
 export type { QueueConfig, DLQConfig, QueueStats, DLQEntry } from './queue';
 export type { WorkerConfig, JobExecutor, JobExecutionResult, WorkerStats } from './worker';
 export type { WatcherConfig, GitHubAPI, ApprovalCheckResult } from './watcher';
+
+// DLQ Triage (P13)
+export {
+  redactSensitiveData,
+  generateTriageSummary,
+  generateTriageIssueBody,
+  formatTriageSummaryForConsole,
+} from './dlq-triage';
+export type { DLQTriageSummary, DLQTriageEntry, DLQTriageIssueBody } from './dlq-triage';

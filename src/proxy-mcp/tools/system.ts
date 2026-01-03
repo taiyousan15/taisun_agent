@@ -52,7 +52,7 @@ export async function systemHealth(): Promise<ToolResult> {
   let recommendations: string[] = [];
   try {
     const period = getLast24hPeriod();
-    const report = generateReport(period);
+    const report = await generateReport(period);
     recommendations = report.recommendations;
   } catch {
     // Ignore report generation errors
@@ -78,9 +78,30 @@ export async function systemHealth(): Promise<ToolResult> {
   }
 
   // Get job system statistics (P12)
-  let jobStats = null;
-  let queueStats = null;
-  let workerStats = null;
+  let jobStats: {
+    queued: number;
+    running: number;
+    waiting_approval: number;
+    succeeded: number;
+    failed: number;
+    canceled: number;
+    total: number;
+  } | null = null;
+  let queueStats: {
+    queued: number;
+    running: number;
+    dlq: number;
+    backpressureActive: boolean;
+    utilizationPercent: number;
+  } | null = null;
+  let workerStats: {
+    processed: number;
+    succeeded: number;
+    failed: number;
+    waitingApproval: number;
+    currentJob: string | null;
+    uptimeMs: number;
+  } | null = null;
 
   if (jobsIntegration) {
     try {

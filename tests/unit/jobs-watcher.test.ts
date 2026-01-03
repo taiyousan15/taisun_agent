@@ -2,7 +2,7 @@
  * Approval Watcher Tests - P12
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+// Jest - no import needed for describe, it, expect, beforeEach, afterEach (use jest instead of vi)
 import {
   ApprovalWatcher,
   GitHubAPI,

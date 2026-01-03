@@ -28,6 +28,6 @@ export {
   getLast7dPeriod,
 } from './report';
 
-export type { ReportData, ReportPeriod, McpMetrics } from './report';
+export type { ReportData, ReportPeriod, McpMetrics, JobMetrics } from './report';
 
 export { postReportToIssue, createReportIssue } from './post-to-issue';

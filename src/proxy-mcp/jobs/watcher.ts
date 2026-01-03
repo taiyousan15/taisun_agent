@@ -9,6 +9,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { execSync } from 'child_process';
 import { Job } from './types';
 import { JobQueue } from './queue';
 import { JobStoreService } from './store';
@@ -318,8 +319,6 @@ export function createMockGitHubAPI(
  * Create a real GitHub API using gh CLI
  */
 export function createGitHubAPI(repo?: string): GitHubAPI {
-  const { execSync } = require('child_process');
-
   const getRepo = () => {
     if (repo) return repo;
     try {

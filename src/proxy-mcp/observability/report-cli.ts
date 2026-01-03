@@ -96,7 +96,7 @@ async function main(): Promise<void> {
   console.log(`[report-cli] Period: ${period.start.toISOString()} ~ ${period.end.toISOString()}`);
 
   // Generate report
-  const reportData: ReportData = generateReport(period);
+  const reportData: ReportData = await generateReport(period);
   const markdown = formatReportMarkdown(reportData);
 
   // Summary output
