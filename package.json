@@ -47,7 +47,11 @@
     "obs:post:daily": "node dist/proxy-mcp/observability/report-cli.js --period 24h --post",
     "obs:post:weekly": "node dist/proxy-mcp/observability/report-cli.js --period 7d --post",
     "chrome:debug:start": "node dist/proxy-mcp/browser/cdp/chrome-debug-cli.js",
-    "chrome:cdp:smoke": "node dist/proxy-mcp/browser/cdp/cdp-smoke-cli.js"
+    "chrome:cdp:smoke": "node dist/proxy-mcp/browser/cdp/cdp-smoke-cli.js",
+    "ops:schedule:run": "node dist/scripts/ops/schedule-runner.js",
+    "ops:schedule:loop": "node dist/scripts/ops/schedule-runner.js --loop",
+    "ops:schedule:status": "node dist/scripts/ops/schedule-runner.js --status",
+    "security:secrets-scan": "npx gitleaks detect --source . --verbose"
   },
   "keywords": [
     "ai",

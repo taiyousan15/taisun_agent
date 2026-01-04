@@ -24,6 +24,7 @@
 | [17_CHECKLIST_PLAYWRIGHT_CDP.md](./17_CHECKLIST_PLAYWRIGHT_CDP.md) | Playwright CDP Session Reuseチェックリスト |
 | [18_CHECKLIST_URL_BUNDLE_PIPELINE.md](./18_CHECKLIST_URL_BUNDLE_PIPELINE.md) | URL Bundle Pipelineチェックリスト |
 | [19_CHECKLIST_ONE_COMMAND_PIPELINE.md](./19_CHECKLIST_ONE_COMMAND_PIPELINE.md) | One-Command Pipelineチェックリスト |
+| [30_CHECKLIST_SCHEDULED_OPS_JOBS.md](./30_CHECKLIST_SCHEDULED_OPS_JOBS.md) | Scheduled Ops Jobs有効化チェックリスト (P18) |
 
 ### Technical Docs (20-)
 | File | Description |
@@ -38,6 +39,11 @@
 | [27_INTERNAL_MCP_ADD_STANDARD.md](./27_INTERNAL_MCP_ADD_STANDARD.md) | 内部MCP追加標準 |
 | [28_PROD_ENABLEMENT_ROLLBACK.md](./28_PROD_ENABLEMENT_ROLLBACK.md) | 本番有効化・ロールバック手順 |
 | [29_OBSERVABILITY_REPORTS.md](./29_OBSERVABILITY_REPORTS.md) | 観測レポート設計 |
+
+### Ops & Automation (40-)
+| File | Description |
+|------|-------------|
+| [45_SCHEDULED_OPS_JOBS.md](./45_SCHEDULED_OPS_JOBS.md) | Scheduled Ops Jobs設計 (P18) |
 
 ### Operations (30-)
 | File | Description |
