@@ -1,0 +1,148 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "incidents.schema.json",
+  "title": "Incident Lifecycle Configuration",
+  "description": "P17: Incident correlation, noise reduction, and optional digest settings",
+  "type": "object",
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "description": "Enable incident correlation and state management",
+      "default": true
+    },
+    "createIssueOnCritical": {
+      "type": "boolean",
+      "description": "Create dedicated incident issue when critical persists (disabled by default for safety)",
+      "default": false
+    },
+    "criticalPersistMinutes": {
+      "type": "integer",
+      "description": "Minutes of critical status before creating incident issue (if enabled)",
+      "minimum": 1,
+      "default": 60
+    },
+    "incidentCooldownMinutes": {
+      "type": "integer",
+      "description": "Cooldown minutes to suppress duplicate posts/notifications for same incident",
+      "minimum": 1,
+      "default": 120
+    },
+    "correlationConfig": {
+      "type": "object",
+      "description": "Configuration for incident correlation key generation",
+      "properties": {
+        "includeSeverity": {
+          "type": "boolean",
+          "default": true
+        },
+        "includeReasons": {
+          "type": "boolean",
+          "default": true
+        },
+        "includeComponents": {
+          "type": "boolean",
+          "default": true
+        },
+        "maxReasonsForKey": {
+          "type": "integer",
+          "description": "Max number of top reasons to include in correlation key",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 3
+        }
+      },
+      "additionalProperties": false
+    },
+    "weeklyDigest": {
+      "type": "object",
+      "description": "Weekly improvement digest settings (disabled by default for safety)",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable weekly digest generation",
+          "default": false
+        },
+        "createIssue": {
+          "type": "boolean",
+          "description": "Create improvement issue from digest (disabled by default)",
+          "default": false
+        },
+        "dayOfWeek": {
+          "type": "integer",
+          "description": "Day of week to generate digest (0=Sunday, 1=Monday, ...)",
+          "minimum": 0,
+          "maximum": 6,
+          "default": 1
+        },
+        "topCauses": {
+          "type": "integer",
+          "description": "Number of top causes to include in digest",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 3
+        },
+        "lookbackDays": {
+          "type": "integer",
+          "description": "Number of days to look back for digest",
+          "minimum": 1,
+          "maximum": 30,
+          "default": 7
+        }
+      },
+      "additionalProperties": false
+    },
+    "stateStore": {
+      "type": "object",
+      "description": "State persistence configuration",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["jsonl", "memory"],
+          "description": "Storage backend type",
+          "default": "jsonl"
+        },
+        "path": {
+          "type": "string",
+          "description": "Path for jsonl state file",
+          "default": ".taisun/incidents/state.jsonl"
+        },
+        "maxEntries": {
+          "type": "integer",
+          "description": "Maximum entries to keep in state store",
+          "minimum": 100,
+          "maximum": 100000,
+          "default": 10000
+        },
+        "retentionDays": {
+          "type": "integer",
+          "description": "Days to retain incident state",
+          "minimum": 1,
+          "maximum": 365,
+          "default": 30
+        }
+      },
+      "additionalProperties": false
+    },
+    "redaction": {
+      "type": "object",
+      "description": "Redaction settings (always enabled for safety)",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable redaction (should always be true)",
+          "default": true
+        },
+        "patterns": {
+          "type": "array",
+          "description": "Additional regex patterns to redact",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

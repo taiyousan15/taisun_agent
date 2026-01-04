@@ -1,0 +1,30 @@
+{
+  "$schema": "./incidents.schema.json",
+  "enabled": true,
+  "createIssueOnCritical": false,
+  "criticalPersistMinutes": 60,
+  "incidentCooldownMinutes": 120,
+  "correlationConfig": {
+    "includeSeverity": true,
+    "includeReasons": true,
+    "includeComponents": true,
+    "maxReasonsForKey": 3
+  },
+  "weeklyDigest": {
+    "enabled": false,
+    "createIssue": false,
+    "dayOfWeek": 1,
+    "topCauses": 3,
+    "lookbackDays": 7
+  },
+  "stateStore": {
+    "type": "jsonl",
+    "path": ".taisun/incidents/state.jsonl",
+    "maxEntries": 10000,
+    "retentionDays": 30
+  },
+  "redaction": {
+    "enabled": true,
+    "patterns": []
+  }
+}
