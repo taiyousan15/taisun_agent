@@ -1,6 +1,30 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "mcps": [
+    {
+      "name": "pdf-reader",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@sylphx/pdf-reader-mcp"],
+      "enabled": true,
+      "versionPin": "latest",
+      "requiredEnv": [],
+      "tags": ["pdf", "document", "extract", "reader"],
+      "shortDescription": "PDF reading and text extraction with page-level control",
+      "dangerousOperations": [],
+      "allowlist": ["read_pdf"],
+      "resilience": {
+        "timeout": { "spawnMs": 15000, "toolCallMs": 60000 },
+        "retry": { "maxAttempts": 2, "backoffMs": 1000, "jitter": true },
+        "circuit": { "enabled": true, "failureThreshold": 3, "cooldownMs": 60000 }
+      },
+      "triggers": {
+        "fileExts": ["pdf", "PDF"],
+        "mimeTypes": ["application/pdf"],
+        "urlSuffixes": [".pdf", ".PDF"],
+        "deferredOnly": true
+      }
+    },
     {
       "name": "github",
       "transport": "stdio",
