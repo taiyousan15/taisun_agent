@@ -2,10 +2,12 @@
  * GitHub Integration - M6
  *
  * Issue logging and approval management
+ * P20 Update: i18n support for Japanese default
  */
 
 import { execSync } from 'child_process';
 import { SupervisorState, ExecutionPlan } from './types';
+import { t, formatSteps } from '../../i18n';
 
 /**
  * Check if gh CLI is available
@@ -54,18 +56,12 @@ export async function createRunlogIssue(
     return null;
   }
 
-  const body = `## Supervisor Run: ${state.runId}
-
-**Input:** ${state.input.substring(0, 200)}${state.input.length > 200 ? '...' : ''}
-
-**Started:** ${state.timestamps.started}
-
-**Status:** ${state.step}
-
----
-
-This issue tracks the supervisor run. Updates will be posted as comments.
-`;
+  const body = t('supervisor.runlog.body', {
+    runId: state.runId,
+    inputPreview: state.input.substring(0, 200) + (state.input.length > 200 ? '...' : ''),
+    startedAt: state.timestamps.started,
+    step: state.step,
+  });
 
   try {
     const result = execSync(
@@ -100,44 +96,20 @@ export async function createApprovalIssue(
     return null;
   }
 
-  const stepsText = plan.steps
-    .map((s, i) => `${i + 1}. **${s.action}** (${s.risk} risk)${s.target ? ` - ${s.target}` : ''}`)
-    .join('\n');
+  const stepsText = formatSteps(plan.steps);
 
-  const body = `## Approval Required
-
-**Run ID:** ${state.runId}
-
-**Input:** ${state.input.substring(0, 500)}${state.input.length > 500 ? '...' : ''}
-
-**Risk Level:** ${plan.estimatedRisk}
-
-**Reason:** ${plan.approvalReason || 'Dangerous operation detected'}
-
-### Planned Steps
-
-${stepsText}
-
----
-
-## How to Approve
-
-1. Review the planned steps above
-2. Comment \`APPROVE\` on this issue to proceed
-3. Or add the \`approved\` label
-
-## How to Reject
-
-Comment \`REJECT\` to abort the operation.
-
----
-
-⚠️ **This operation will not proceed without explicit approval.**
-`;
+  const title = t('supervisor.approval.title', { runId: state.runId });
+  const body = t('supervisor.approval.body', {
+    runId: state.runId,
+    inputPreview: state.input.substring(0, 500) + (state.input.length > 500 ? '...' : ''),
+    riskLevel: plan.estimatedRisk,
+    reason: plan.approvalReason || 'Dangerous operation detected',
+    stepsText,
+  });
 
   try {
     const result = execSync(
-      `gh issue create --repo ${targetRepo} --title "[APPROVAL] ${state.runId}" --body "${body.replace(/"/g, '\\"')}" --label "approval-required"`,
+      `gh issue create --repo ${targetRepo} --title "${title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"')}" --label "approval-required"`,
       { encoding: 'utf8', stdio: 'pipe' }
     ).trim();
     const match = result.match(/\/issues\/(\d+)/);

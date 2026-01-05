@@ -2,6 +2,7 @@
  * Post Report to GitHub Issue
  *
  * Posts observability reports to a configured GitHub Issue
+ * P20 Update: i18n support for Japanese default
  */
 
 import * as fs from 'fs';
@@ -9,6 +10,7 @@ import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { ReportData } from './report';
+import { t, getLocale } from '../../i18n';
 
 const execAsync = promisify(exec);
 
@@ -59,12 +61,15 @@ function loadConfig(): ReportConfig | null {
  */
 function generateAlertSummary(data: ReportData, config: ReportConfig): string {
   const alerts: string[] = [];
+  const isJa = getLocale() === 'ja';
 
   // Success rate alerts
   if (data.successRate < config.thresholds.criticalSuccessRate) {
-    alerts.push(`🔴 CRITICAL: 成功率 ${(data.successRate * 100).toFixed(1)}% < ${config.thresholds.criticalSuccessRate * 100}%`);
+    const successRateText = isJa ? '成功率' : 'Success rate';
+    alerts.push(`🔴 CRITICAL: ${successRateText} ${(data.successRate * 100).toFixed(1)}% < ${config.thresholds.criticalSuccessRate * 100}%`);
   } else if (data.successRate < config.thresholds.warnSuccessRate) {
-    alerts.push(`🟡 WARNING: 成功率 ${(data.successRate * 100).toFixed(1)}% < ${config.thresholds.warnSuccessRate * 100}%`);
+    const successRateText = isJa ? '成功率' : 'Success rate';
+    alerts.push(`🟡 WARNING: ${successRateText} ${(data.successRate * 100).toFixed(1)}% < ${config.thresholds.warnSuccessRate * 100}%`);
   }
 
   // p95 latency alerts
@@ -76,11 +81,14 @@ function generateAlertSummary(data: ReportData, config: ReportConfig): string {
 
   // Circuit breaker alerts
   if (data.circuitSummary.open > 0) {
-    alerts.push(`🔴 CRITICAL: ${data.circuitSummary.open}個のMCPがCircuit Open状態`);
+    const circuitText = isJa
+      ? `${data.circuitSummary.open}個のMCPがCircuit Open状態`
+      : `${data.circuitSummary.open} MCP(s) in Circuit Open state`;
+    alerts.push(`🔴 CRITICAL: ${circuitText}`);
   }
 
   if (alerts.length === 0) {
-    return '✅ All systems operational';
+    return isJa ? '✅ 全システム正常稼働中' : '✅ All systems operational';
   }
 
   return alerts.join('\n');
@@ -104,20 +112,13 @@ export async function postReportToIssue(data: ReportData, markdown: string): Pro
   // Generate alert summary
   const alertSummary = generateAlertSummary(data, config);
 
-  // Build comment body
-  const commentBody = `## ${data.period.label} Report
-
-**Status:** ${alertSummary}
-
-<details>
-<summary>Full Report</summary>
-
-${markdown}
-
-</details>
-
----
-_Auto-generated at ${new Date().toISOString()}_`;
+  // Build comment body using i18n template
+  const commentBody = t('observability.report.body', {
+    periodLabel: data.period.label,
+    alertSummary,
+    markdown,
+    timestamp: new Date().toISOString(),
+  });
 
   try {
     // Use gh CLI to post comment
@@ -153,22 +154,8 @@ _Auto-generated at ${new Date().toISOString()}_`;
  * Create initial report issue (run once to set up)
  */
 export async function createReportIssue(owner: string, repo: string): Promise<PostResult> {
-  const title = '[Observability] Daily/Weekly Report Thread';
-  const body = `# Observability Report Thread
-
-This issue receives automated daily and weekly observability reports.
-
-## Reports
-- **Daily**: Posted every day with 24h metrics
-- **Weekly**: Posted every week with 7d trends
-
-## Alert Levels
-- 🔴 **CRITICAL**: Immediate action required
-- 🟡 **WARNING**: Investigation recommended
-- ✅ **OK**: All systems operational
-
----
-_Created by observability system_`;
+  const title = t('observability.thread.title');
+  const body = t('observability.thread.body');
 
   try {
     const escapedBody = body.replace(/'/g, "'\\''");
