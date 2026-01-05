@@ -296,13 +296,32 @@ npm run proxy:smoke           # MCP smoke test
 
 ## Documentation
 
+### Getting Started
+
 | Document | Description |
 |----------|-------------|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture |
-| [DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | Developer guide |
-| [API_REFERENCE.md](docs/API_REFERENCE.md) | API reference |
-| [OPERATIONS.md](docs/OPERATIONS.md) | Operations guide |
-| [RUNBOOK.md](docs/RUNBOOK.md) | Runbook procedures |
+| [QUICK_START.md](docs/QUICK_START.md) | 5分クイックスタート |
+| [CONFIG.md](docs/CONFIG.md) | 設定ガイド |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | トラブルシューティング |
+| [getting-started-ja.md](docs/getting-started-ja.md) | 日本語セットアップガイド |
+
+### Development
+
+| Document | Description |
+|----------|-------------|
+| [CONTRIBUTING.md](docs/CONTRIBUTING.md) | コントリビューションガイド |
+| [DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | 開発者ガイド |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | システムアーキテクチャ |
+| [API_REFERENCE.md](docs/API_REFERENCE.md) | API リファレンス |
+
+### Operations
+
+| Document | Description |
+|----------|-------------|
+| [OPERATIONS.md](docs/OPERATIONS.md) | 運用ガイド |
+| [RUNBOOK.md](docs/RUNBOOK.md) | ランブック |
+| [SECURITY.md](docs/SECURITY.md) | セキュリティポリシー |
+| [CHANGELOG.md](docs/CHANGELOG.md) | 変更履歴 |
 
 ## Technology Stack
 
@@ -317,6 +336,8 @@ npm run proxy:smoke           # MCP smoke test
 | **Infrastructure** | Docker, n8n |
 
 ## Contributing
+
+詳細は [CONTRIBUTING.md](docs/CONTRIBUTING.md) を参照してください。
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
