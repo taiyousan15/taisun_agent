@@ -59,6 +59,16 @@ describe('i18n', () => {
       process.env.TAISUN_LOCALE = 'ja-JP';
       expect(getLocale()).toBe('ja');
     });
+
+    it('should fallback to "ja" when TAISUN_LOCALE is unknown value', () => {
+      process.env.TAISUN_LOCALE = 'fr';
+      expect(getLocale()).toBe('ja');
+    });
+
+    it('should fallback to "ja" when TAISUN_LOCALE is empty string', () => {
+      process.env.TAISUN_LOCALE = '';
+      expect(getLocale()).toBe('ja');
+    });
   });
 
   describe('setLocale', () => {

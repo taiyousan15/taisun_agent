@@ -126,6 +126,8 @@ memory_search   // コンテンツ検索
 
 ## Quick Start
 
+> **日本語ユーザー向け**: 詳細なセットアップガイドは [docs/getting-started-ja.md](docs/getting-started-ja.md) をご覧ください。
+
 ### Prerequisites
 
 - Node.js 18.x+
