@@ -2,12 +2,79 @@
 /**
  * GitHub Enhanced MCP Server
  * Provides extended GitHub operations for Issue/PR management
+ * P20 Update: i18n support for Japanese default
  */
 
 const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
 const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
 const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
 const { Octokit } = require('@octokit/rest');
+const fs = require('fs');
+const path = require('path');
+
+// i18n support
+function getLocale() {
+  const envLocale = process.env.TAISUN_LOCALE;
+  if (envLocale === 'en' || envLocale === 'en-US') return 'en';
+  if (envLocale === 'ja' || envLocale === 'ja-JP') return 'ja';
+
+  // Try to load from config
+  try {
+    const configPath = path.join(process.cwd(), 'config', 'proxy-mcp', 'logging.json');
+    if (fs.existsSync(configPath)) {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      if (config.issueLogLocale === 'en' || config.issueLogLocale === 'en-US') return 'en';
+    }
+  } catch {
+    // Ignore
+  }
+
+  return 'ja'; // Default to Japanese
+}
+
+const i18n = {
+  ja: {
+    'progress.title': '🤖 エージェント進捗更新',
+    'progress.status': 'ステータス',
+    'progress.section': '進捗',
+    'progress.tasks_completed': 'タスク完了',
+    'progress.current_task': '現在のタスク',
+    'progress.updated': '更新',
+    'pr.created': '🤖 エージェントが{draft}PRを作成しました: #{number}',
+    'pr.draft': 'ドラフト',
+    'quality.title': '📊 品質レポート',
+    'quality.score': 'スコア',
+    'quality.typescript_errors': 'TypeScriptエラー',
+    'quality.eslint_errors': 'ESLintエラー',
+    'quality.security_score': 'セキュリティスコア',
+    'quality.test_coverage': 'テストカバレッジ',
+  },
+  en: {
+    'progress.title': '🤖 Agent Progress Update',
+    'progress.status': 'Status',
+    'progress.section': 'Progress',
+    'progress.tasks_completed': 'tasks completed',
+    'progress.current_task': 'Current Task',
+    'progress.updated': 'Updated',
+    'pr.created': '🤖 Agent has created a {draft}PR: #{number}',
+    'pr.draft': 'draft ',
+    'quality.title': '📊 Quality Report',
+    'quality.score': 'Score',
+    'quality.typescript_errors': 'TypeScript Errors',
+    'quality.eslint_errors': 'ESLint Errors',
+    'quality.security_score': 'Security Score',
+    'quality.test_coverage': 'Test Coverage',
+  },
+};
+
+function t(key, params = {}) {
+  const locale = getLocale();
+  let template = i18n[locale]?.[key] || i18n['en'][key] || key;
+  for (const [param, value] of Object.entries(params)) {
+    template = template.replace(new RegExp(`\\{${param}\\}`, 'g'), String(value));
+  }
+  return template;
+}
 
 class GitHubEnhancedServer {
   constructor() {
@@ -312,21 +379,27 @@ class GitHubEnhancedServer {
       failed: '❌',
     };
 
+    const statusText = {
+      in_progress: getLocale() === 'ja' ? '進行中' : 'IN PROGRESS',
+      completed: getLocale() === 'ja' ? '完了' : 'COMPLETED',
+      failed: getLocale() === 'ja' ? '失敗' : 'FAILED',
+    };
+
     const progressBar = this.createProgressBar(progress.completed, progress.total);
 
     const comment = `
-## 🤖 Agent Progress Update
+## ${t('progress.title')}
 
-${progressEmoji[progress.status]} **Status**: ${progress.status.replace('_', ' ').toUpperCase()}
+${progressEmoji[progress.status]} **${t('progress.status')}**: ${statusText[progress.status]}
 
-### Progress
+### ${t('progress.section')}
 ${progressBar}
-**${progress.completed}/${progress.total}** tasks completed
+**${progress.completed}/${progress.total}** ${t('progress.tasks_completed')}
 
-${progress.currentTask ? `**Current Task**: ${progress.currentTask}` : ''}
+${progress.currentTask ? `**${t('progress.current_task')}**: ${progress.currentTask}` : ''}
 
 ---
-*Updated: ${new Date().toISOString()}*
+*${t('progress.updated')}: ${new Date().toISOString()}*
 `;
 
     await this.octokit.issues.createComment({
@@ -363,12 +436,12 @@ ${progress.currentTask ? `**Current Task**: ${progress.currentTask}` : ''}
     // Enhance PR body with quality report
     let enhancedBody = body;
     if (qualityReport) {
-      enhancedBody += `\n\n## 📊 Quality Report\n\n`;
-      enhancedBody += `- **Score**: ${qualityReport.score}/100 ${qualityReport.passed ? '✅' : '❌'}\n`;
-      enhancedBody += `- **TypeScript Errors**: ${qualityReport.breakdown?.typeScriptScore || 'N/A'}\n`;
-      enhancedBody += `- **ESLint Errors**: ${qualityReport.breakdown?.eslintScore || 'N/A'}\n`;
-      enhancedBody += `- **Security Score**: ${qualityReport.breakdown?.securityScore || 'N/A'}\n`;
-      enhancedBody += `- **Test Coverage**: ${qualityReport.breakdown?.testCoverageScore || 'N/A'}\n`;
+      enhancedBody += `\n\n## ${t('quality.title')}\n\n`;
+      enhancedBody += `- **${t('quality.score')}**: ${qualityReport.score}/100 ${qualityReport.passed ? '✅' : '❌'}\n`;
+      enhancedBody += `- **${t('quality.typescript_errors')}**: ${qualityReport.breakdown?.typeScriptScore || 'N/A'}\n`;
+      enhancedBody += `- **${t('quality.eslint_errors')}**: ${qualityReport.breakdown?.eslintScore || 'N/A'}\n`;
+      enhancedBody += `- **${t('quality.security_score')}**: ${qualityReport.breakdown?.securityScore || 'N/A'}\n`;
+      enhancedBody += `- **${t('quality.test_coverage')}**: ${qualityReport.breakdown?.testCoverageScore || 'N/A'}\n`;
     }
 
     enhancedBody += `\n\nCloses #${issueNumber}`;
@@ -385,11 +458,13 @@ ${progress.currentTask ? `**Current Task**: ${progress.currentTask}` : ''}
     });
 
     // Link to issue
+    const draftText = draft ? t('pr.draft') : '';
+    const prComment = t('pr.created', { draft: draftText, number: response.data.number });
     await this.octokit.issues.createComment({
       owner: this.owner,
       repo: this.repo,
       issue_number: issueNumber,
-      body: `🤖 Agent has created a ${draft ? 'draft ' : ''}PR: #${response.data.number}`,
+      body: prComment,
     });
 
     return {
