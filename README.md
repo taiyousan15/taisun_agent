@@ -9,6 +9,27 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/Tests-524%20passing-brightgreen)](https://github.com/taiyousan15/taisun_agent/actions)
 
+---
+
+## はじめての方へ
+
+| ステップ | ドキュメント | 所要時間 |
+|---------|-------------|---------|
+| **1. まずはここから** | [QUICK_START.md](docs/QUICK_START.md) | 5分 |
+| **2. エラーが出たら** | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | - |
+| **3. 詳しく設定したい** | [CONFIG.md](docs/CONFIG.md) | 10分 |
+| **4. 開発に参加したい** | [CONTRIBUTING.md](docs/CONTRIBUTING.md) | 15分 |
+
+```bash
+# 最短セットアップ
+git clone https://github.com/taiyousan15/taisun_agent.git
+cd taisun_agent
+npm install
+npm test
+```
+
+---
+
 ## Overview
 
 TAISUN v2は、Claude Codeと連携し、設計から実装、テスト、デプロイ、マーケティングまでを一貫して支援する**統合開発・マーケティングプラットフォーム**です。
