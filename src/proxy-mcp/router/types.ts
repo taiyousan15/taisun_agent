@@ -41,6 +41,23 @@ export interface RouterConfig {
 }
 
 /**
+ * Trigger configuration for conditional MCP loading
+ * MCPs with triggers are only loaded when conditions are met
+ */
+export interface McpTriggerConfig {
+  /** File extensions that trigger this MCP (e.g., ["pdf", "PDF"]) */
+  fileExts?: string[];
+  /** MIME types that trigger this MCP (e.g., ["application/pdf"]) */
+  mimeTypes?: string[];
+  /** URL suffixes that trigger this MCP (e.g., [".pdf"]) */
+  urlSuffixes?: string[];
+  /** Keywords in input that trigger this MCP */
+  keywords?: string[];
+  /** If true, MCP is only loaded when triggers match (deferred loading) */
+  deferredOnly?: boolean;
+}
+
+/**
  * Resilience configuration for internal MCPs
  */
 export interface McpResilienceConfig {
@@ -76,6 +93,8 @@ export interface InternalMcpDefinition {
   dangerousOperations: string[];
   allowlist?: string[];
   resilience?: McpResilienceConfig;
+  /** Trigger conditions for deferred loading */
+  triggers?: McpTriggerConfig;
 }
 
 export interface LocalMcpOverride {

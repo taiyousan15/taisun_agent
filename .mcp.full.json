@@ -1,5 +1,14 @@
 {
   "mcpServers": {
+    "pdf-reader": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@sylphx/pdf-reader-mcp"],
+      "disabled": true,
+      "description": "PDF reading and text extraction with page-level control (Node.js >= 22.0.0 required)",
+      "category": "document",
+      "note": "Internal MCP - routed via taisun-proxy, not exposed directly. Triggers on PDF files only."
+    },
     "ide-integration": {
       "command": "node",
       "args": [".claude/mcp-servers/ide-integration.js"],

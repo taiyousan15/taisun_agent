@@ -5,6 +5,7 @@
  * M4 Update: Added web skills (read_url, extract_links, capture_dom_map)
  * M5 Update: Added skillize (URL→Skill generation)
  * M6 Update: Added supervisor (LangGraph-based with human approval)
+ * P19 Update: Added PDF skills (pdf.inspect, pdf.extract_pages) with deferred loading
  */
 
 import * as fs from 'fs';
@@ -20,6 +21,7 @@ import {
   checkDangerousPatterns,
   SupervisorOptions,
 } from '../supervisor';
+import { pdfInspect, pdfExtractPages, isPdfReference } from '../pdf';
 
 const SKILLS_DIR = path.join(process.cwd(), '.claude', 'skills');
 
@@ -110,6 +112,11 @@ export function skillRun(
     // M4: Handle web skills (async, return promise wrapper)
     if (skillName.startsWith('web.')) {
       return runWebSkill(skillName, params);
+    }
+
+    // P19: Handle PDF skills (async, return promise wrapper)
+    if (skillName.startsWith('pdf.')) {
+      return runPdfSkill(skillName, params);
     }
 
     // P7.3: Handle pipeline skills (async, return promise wrapper)
@@ -206,6 +213,55 @@ function runWebSkill(skillName: string, params?: Record<string, unknown>): ToolR
       url,
       status: 'ready',
       message: `Web skill ${skillName} is ready. Use skillRunAsync() for actual execution.`,
+      asyncRequired: true,
+    },
+  };
+}
+
+/**
+ * Run a PDF skill (P19)
+ *
+ * PDF skills are async but we return a sync wrapper that
+ * indicates the skill needs to be awaited.
+ */
+function runPdfSkill(skillName: string, params?: Record<string, unknown>): ToolResult {
+  const source = params?.source as string;
+
+  if (!source) {
+    return {
+      success: false,
+      error: `Source is required for ${skillName}. Use params.source to specify the PDF path or URL.`,
+    };
+  }
+
+  // Validate source (path or URL)
+  const isUrl = source.startsWith('http://') || source.startsWith('https://');
+  if (!isUrl && !source.includes('/') && !source.includes('\\')) {
+    return {
+      success: false,
+      error: `Invalid source: ${source}. Must be a file path or URL.`,
+    };
+  }
+
+  // For extract_pages, require pages parameter
+  if (skillName === 'pdf.extract_pages') {
+    const pages = params?.pages as string;
+    if (!pages) {
+      return {
+        success: false,
+        error: 'Pages parameter is required for pdf.extract_pages. Use params.pages (e.g., "1-5", "1,3,5", "1-10").',
+      };
+    }
+  }
+
+  return {
+    success: true,
+    data: {
+      skill: skillName,
+      source,
+      pages: params?.pages,
+      status: 'ready',
+      message: `PDF skill ${skillName} is ready. Use skillRunAsync() for actual execution.`,
       asyncRequired: true,
     },
   };
@@ -382,6 +438,52 @@ export async function skillRunAsync(
       return {
         success: false,
         error: `Supervisor failed: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  }
+
+  // P19: Handle PDF skills (don't require URL, use source instead)
+  if (skillName.startsWith('pdf.')) {
+    const source = params?.source as string;
+    if (!source) {
+      return {
+        success: false,
+        error: `Source is required for ${skillName}. Use params.source to specify the PDF path or URL.`,
+      };
+    }
+
+    try {
+      switch (skillName) {
+        case 'pdf.inspect': {
+          const result = await pdfInspect(source);
+          return result;
+        }
+
+        case 'pdf.extract_pages': {
+          const pages = params?.pages as string;
+          if (!pages) {
+            return {
+              success: false,
+              error: 'Pages parameter is required for pdf.extract_pages.',
+            };
+          }
+          const result = await pdfExtractPages(source, pages, {
+            includeImages: params?.includeImages === true,
+            namespace: (params?.namespace as 'short-term' | 'long-term') || 'short-term',
+          });
+          return result;
+        }
+
+        default:
+          return {
+            success: false,
+            error: `Unknown PDF skill: ${skillName}. Available: pdf.inspect, pdf.extract_pages`,
+          };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: `PDF skill failed: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }
