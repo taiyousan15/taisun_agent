@@ -53,7 +53,9 @@
     "ops:schedule:run": "node dist/scripts/ops/schedule-runner.js",
     "ops:schedule:loop": "node dist/scripts/ops/schedule-runner.js --loop",
     "ops:schedule:status": "node dist/scripts/ops/schedule-runner.js --status",
-    "security:secrets-scan": "npx gitleaks detect --source . --verbose"
+    "security:secrets-scan": "npx gitleaks detect --source . --verbose",
+    "doctor": "npx ts-node scripts/doctor.ts",
+    "runlog:check": "npx ts-node scripts/doctor.ts"
   },
   "keywords": [
     "ai",

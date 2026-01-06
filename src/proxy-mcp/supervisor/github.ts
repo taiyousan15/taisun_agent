@@ -2,10 +2,65 @@
  * GitHub Integration - M6
  *
  * Issue logging and approval management
+ * With i18n support and environment validation
  */
 
 import { execSync } from 'child_process';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
 import { SupervisorState, ExecutionPlan } from './types';
+import { t } from '../../i18n';
+import { requireGitHubEnv, GitHubEnvError } from '../../utils/env-check';
+
+/**
+ * Logging configuration
+ */
+export interface LoggingConfig {
+  issueLogEnabled: boolean;
+  issueLogLocale: string;
+  autoCreateIssues: boolean;
+  defaultLabels: string[];
+  runlogTitleTemplate: string;
+  parentIssueTitleTemplate: string;
+  requireGitHubAuth: boolean;
+}
+
+const DEFAULT_CONFIG: LoggingConfig = {
+  issueLogEnabled: true,
+  issueLogLocale: 'ja',
+  autoCreateIssues: true,
+  defaultLabels: ['runlog', 'automated'],
+  runlogTitleTemplate: '[RUNLOG] {taskTitle}',
+  parentIssueTitleTemplate: '[{phase}] {taskTitle}',
+  requireGitHubAuth: true,
+};
+
+/**
+ * Load logging configuration
+ */
+export function loadLoggingConfig(): LoggingConfig {
+  const configPath = join(process.cwd(), 'config', 'proxy-mcp', 'logging.json');
+  if (!existsSync(configPath)) {
+    return DEFAULT_CONFIG;
+  }
+  try {
+    const content = readFileSync(configPath, 'utf-8');
+    const parsed = JSON.parse(content);
+    return { ...DEFAULT_CONFIG, ...parsed };
+  } catch {
+    return DEFAULT_CONFIG;
+  }
+}
+
+/**
+ * Validate GitHub environment before issue operations
+ * Throws GitHubEnvError with helpful message if invalid
+ */
+export function validateGitHubEnv(config: LoggingConfig): void {
+  if (config.requireGitHubAuth) {
+    requireGitHubEnv();
+  }
+}
 
 /**
  * Check if gh CLI is available
@@ -258,3 +313,130 @@ export async function closeIssue(
     return false;
   }
 }
+
+// ============================================================
+// Lifecycle Hooks - i18n enabled
+// ============================================================
+
+/**
+ * Post on supervisor start (create RUNLOG issue)
+ * Validates GitHub environment first - throws if invalid
+ */
+export async function postOnStart(
+  state: SupervisorState,
+  config?: LoggingConfig
+): Promise<number | null> {
+  const cfg = config || loadLoggingConfig();
+
+  if (!cfg.issueLogEnabled) {
+    return null;
+  }
+
+  // Validate environment - throws if invalid
+  validateGitHubEnv(cfg);
+
+  const repo = getDefaultRepo();
+  if (!repo) {
+    throw new GitHubEnvError(t('env.missing.repo'), {
+      valid: false,
+      errors: [{ key: 'Repository', message: t('env.missing.repo') }],
+      warnings: [],
+    });
+  }
+
+  const taskTitle = state.input.substring(0, 50) + (state.input.length > 50 ? '...' : '');
+  const title = cfg.runlogTitleTemplate.replace('{taskTitle}', taskTitle);
+  const body = t('issue.runlog.created', {
+    runId: state.runId,
+    input: state.input.substring(0, 200) + (state.input.length > 200 ? '...' : ''),
+    startedAt: state.timestamps.started,
+  });
+
+  const labels = cfg.defaultLabels.join(',');
+
+  try {
+    const escapedBody = body.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+    const result = execSync(
+      `gh issue create --repo ${repo} --title "${title}" --body "${escapedBody}" --label "${labels}"`,
+      { encoding: 'utf8', stdio: 'pipe' }
+    ).trim();
+    const match = result.match(/\/issues\/(\d+)/);
+    return match ? parseInt(match[1], 10) : null;
+  } catch (err) {
+    console.error('[Supervisor] Failed to create RUNLOG issue:', err);
+    return null;
+  }
+}
+
+/**
+ * Post progress update to RUNLOG issue
+ */
+export async function postOnProgress(
+  state: SupervisorState,
+  messageKey: string,
+  params?: Record<string, string | number>,
+  config?: LoggingConfig
+): Promise<boolean> {
+  const cfg = config || loadLoggingConfig();
+
+  if (!cfg.issueLogEnabled || !state.runlogIssue) {
+    return false;
+  }
+
+  const message = t(messageKey, params);
+  return addIssueComment(state.runlogIssue, message);
+}
+
+/**
+ * Post require_human notification and stop
+ */
+export async function postOnRequireHuman(
+  state: SupervisorState,
+  reason: string,
+  instructions: string,
+  config?: LoggingConfig
+): Promise<void> {
+  const cfg = config || loadLoggingConfig();
+
+  if (!cfg.issueLogEnabled || !state.runlogIssue) {
+    // Still throw to stop execution
+    throw new Error(t('issue.require_human.stop', { reason, instructions }));
+  }
+
+  const message = t('issue.require_human.stop', { reason, instructions });
+  await addIssueComment(state.runlogIssue, message);
+
+  // Throw to stop execution
+  throw new Error(message);
+}
+
+/**
+ * Post on supervisor finish (success or error)
+ */
+export async function postOnFinish(
+  state: SupervisorState,
+  success: boolean,
+  error?: string,
+  config?: LoggingConfig
+): Promise<boolean> {
+  const cfg = config || loadLoggingConfig();
+
+  if (!cfg.issueLogEnabled || !state.runlogIssue) {
+    return false;
+  }
+
+  const completedAt = new Date().toISOString();
+  let message: string;
+
+  if (success) {
+    message = t('issue.finish.success', { completedAt });
+  } else {
+    message = t('issue.finish.error', { completedAt, error: error || 'Unknown error' });
+  }
+
+  // Add final comment and close the issue
+  return closeIssue(state.runlogIssue, message);
+}
+
+// Re-export for convenience
+export { GitHubEnvError } from '../../utils/env-check';

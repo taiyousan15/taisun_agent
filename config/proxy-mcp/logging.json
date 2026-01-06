@@ -1,0 +1,9 @@
+{
+  "issueLogEnabled": true,
+  "issueLogLocale": "ja",
+  "autoCreateIssues": true,
+  "defaultLabels": ["runlog", "automated"],
+  "runlogTitleTemplate": "[RUNLOG] {taskTitle}",
+  "parentIssueTitleTemplate": "[{phase}] {taskTitle}",
+  "requireGitHubAuth": true
+}
