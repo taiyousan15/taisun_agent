@@ -23,6 +23,67 @@ import {
 
 const SKILLS_DIR = path.join(process.cwd(), '.claude', 'skills');
 
+// Security: Pattern for valid skill names (alphanumeric, hyphen, underscore, dot)
+const VALID_SKILL_NAME_PATTERN = /^[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)*$/;
+
+// Security: Maximum skill name length
+const MAX_SKILL_NAME_LENGTH = 100;
+
+/**
+ * Security: Validate skill name to prevent path traversal attacks
+ * CWE-22: Improper Limitation of a Pathname to a Restricted Directory
+ *
+ * @param skillName - The skill name to validate
+ * @returns Object with valid flag and optional error message
+ */
+function validateSkillName(skillName: string): { valid: boolean; error?: string } {
+  // Check for empty or whitespace-only name
+  if (!skillName || skillName.trim() === '') {
+    return { valid: false, error: 'Skill name cannot be empty' };
+  }
+
+  // Check length
+  if (skillName.length > MAX_SKILL_NAME_LENGTH) {
+    return {
+      valid: false,
+      error: `Skill name too long (max ${MAX_SKILL_NAME_LENGTH} characters)`,
+    };
+  }
+
+  // Check for path traversal patterns
+  if (skillName.includes('..') || skillName.includes('/') || skillName.includes('\\')) {
+    return {
+      valid: false,
+      error: 'Skill name contains path traversal characters',
+    };
+  }
+
+  // Check for null bytes (could bypass checks in some systems)
+  if (skillName.includes('\0')) {
+    return {
+      valid: false,
+      error: 'Skill name contains null bytes',
+    };
+  }
+
+  // Skip pattern validation for built-in skills (web.*, pipeline.*, skillize, supervisor)
+  const builtinPrefixes = ['web.', 'pipeline.'];
+  const builtinNames = ['skillize', 'supervisor'];
+
+  const isBuiltin =
+    builtinNames.includes(skillName) ||
+    builtinPrefixes.some((prefix) => skillName.startsWith(prefix));
+
+  if (!isBuiltin && !VALID_SKILL_NAME_PATTERN.test(skillName)) {
+    return {
+      valid: false,
+      error: 'Skill name contains invalid characters. Only alphanumeric, hyphen, and underscore allowed.',
+    };
+  }
+
+  return { valid: true };
+}
+
 export type SkillRunMode = 'preview' | 'route' | 'execute';
 
 /**
@@ -99,6 +160,15 @@ export function skillRun(
   skillName: string,
   params?: Record<string, unknown>
 ): ToolResult {
+  // Security: Validate skill name to prevent path traversal
+  const validation = validateSkillName(skillName);
+  if (!validation.valid) {
+    return {
+      success: false,
+      error: `Invalid skill name: ${validation.error}`,
+    };
+  }
+
   const mode = (params?.mode as SkillRunMode) || 'preview';
 
   try {

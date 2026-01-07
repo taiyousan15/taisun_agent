@@ -7,6 +7,7 @@
 import { spawn, ChildProcess } from 'child_process';
 import { InternalMcpDefinition } from '../router/types';
 import { getMcpByName } from './registry';
+import { safeJSONParse } from '../../utils/safe-json';
 
 interface JsonRpcRequest {
   jsonrpc: '2.0';
@@ -207,11 +208,15 @@ export class McpClient {
       this.buffer = this.buffer.slice(newlineIndex + 1);
 
       if (line) {
-        try {
-          const response: JsonRpcResponse = JSON.parse(line);
+        // Security: Use safe JSON parser to prevent prototype pollution
+        const response = safeJSONParse<JsonRpcResponse>(line);
+        if (response && response.jsonrpc === '2.0' && typeof response.id === 'number') {
           this.handleResponse(response);
-        } catch {
-          // Not valid JSON, might be a notification or log
+        } else if (line.startsWith('{')) {
+          // Likely JSON but failed validation
+          console.debug(`[${this.definition.name}] Invalid JSON-RPC response:`, line.substring(0, 100));
+        } else {
+          // Not JSON, might be a notification or log
           console.debug(`[${this.definition.name}] Non-JSON output:`, line);
         }
       }

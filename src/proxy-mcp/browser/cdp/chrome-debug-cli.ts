@@ -22,10 +22,82 @@ import * as fs from 'fs';
 const DEFAULT_PORT = 9222;
 const DEFAULT_PROFILE_DIR = path.join(os.homedir(), '.chrome-debug-profile');
 
+// Security: Whitelist of allowed Chrome executable names
+const ALLOWED_CHROME_BASENAMES = [
+  'google chrome',
+  'google-chrome',
+  'google-chrome-stable',
+  'chrome',
+  'chrome.exe',
+  'chromium',
+  'chromium-browser',
+];
+
+// Security: Shell metacharacters that must not appear in paths
+const DANGEROUS_CHARS = /[;&|`$(){}[\]<>!'"\\]/;
+
 interface ChromeConfig {
   chromePath: string;
   port: number;
   profileDir: string;
+}
+
+/**
+ * Security: Validate Chrome path to prevent command injection
+ * @throws Error if path is invalid or potentially dangerous
+ */
+function validateChromePath(chromePath: string): void {
+  // Check for empty path
+  if (!chromePath || chromePath.trim() === '') {
+    throw new Error('Security: Chrome path cannot be empty');
+  }
+
+  // Check for dangerous shell metacharacters
+  if (DANGEROUS_CHARS.test(chromePath)) {
+    throw new Error(
+      `Security: Chrome path contains dangerous characters: ${chromePath}`
+    );
+  }
+
+  // Must be absolute path
+  if (!path.isAbsolute(chromePath)) {
+    throw new Error(
+      `Security: Chrome path must be absolute: ${chromePath}`
+    );
+  }
+
+  // Check if file exists
+  if (!fs.existsSync(chromePath)) {
+    throw new Error(
+      `Security: Chrome executable not found: ${chromePath}`
+    );
+  }
+
+  // Resolve symlinks and get real path
+  let realPath: string;
+  try {
+    realPath = fs.realpathSync(chromePath);
+  } catch {
+    throw new Error(
+      `Security: Cannot resolve Chrome path: ${chromePath}`
+    );
+  }
+
+  // Validate basename against whitelist
+  const basename = path.basename(realPath).toLowerCase();
+  if (!ALLOWED_CHROME_BASENAMES.includes(basename)) {
+    throw new Error(
+      `Security: Chrome executable name not in whitelist: ${basename}. ` +
+      `Allowed: ${ALLOWED_CHROME_BASENAMES.join(', ')}`
+    );
+  }
+
+  // Additional check: path should not contain path traversal
+  if (chromePath.includes('..')) {
+    throw new Error(
+      `Security: Chrome path contains path traversal: ${chromePath}`
+    );
+  }
 }
 
 /**
@@ -97,6 +169,9 @@ function getConfig(): ChromeConfig {
   const chromePath = process.env.CHROME_PATH || detectChromePath();
   const port = parseInt(process.env.CHROME_DEBUG_PORT || String(DEFAULT_PORT), 10);
   const profileDir = process.env.CHROME_PROFILE_DIR || DEFAULT_PROFILE_DIR;
+
+  // Security: Validate Chrome path before use
+  validateChromePath(chromePath);
 
   return { chromePath, port, profileDir };
 }

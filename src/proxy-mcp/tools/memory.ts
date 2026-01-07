@@ -3,10 +3,139 @@
  *
  * M3 Update: Uses MemoryService with short/long namespace separation
  * and minimal output principle (summary + refId center).
+ *
+ * Security: Input validation added to prevent DoS and injection attacks.
  */
 
 import { ToolResult } from '../types';
 import { getMemoryService, MemoryNamespace, MemoryOutput } from '../memory';
+
+// Security: Input validation constants
+const MAX_CONTENT_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_TAG_LENGTH = 50;
+const MAX_TAGS = 20;
+const MAX_SOURCE_LENGTH = 200;
+const MIN_IMPORTANCE = 0;
+const MAX_IMPORTANCE = 10;
+const MAX_QUERY_LENGTH = 1000;
+const MAX_METADATA_SIZE = 10000; // 10KB
+
+// Security: Valid tag pattern (alphanumeric, hyphen, underscore)
+const VALID_TAG_PATTERN = /^[a-zA-Z0-9_-]+$/;
+
+/**
+ * Security: Validate memory add input
+ */
+function validateMemoryAddInput(
+  content: string,
+  options?: {
+    tags?: string[];
+    source?: string;
+    importance?: number;
+    metadata?: Record<string, unknown>;
+  }
+): { valid: boolean; error?: string } {
+  // Content validation
+  if (!content) {
+    return { valid: false, error: 'Content cannot be empty' };
+  }
+
+  if (content.length > MAX_CONTENT_SIZE) {
+    return {
+      valid: false,
+      error: `Content too large: ${content.length} bytes (max: ${MAX_CONTENT_SIZE})`,
+    };
+  }
+
+  // Tags validation
+  if (options?.tags) {
+    if (!Array.isArray(options.tags)) {
+      return { valid: false, error: 'Tags must be an array' };
+    }
+
+    if (options.tags.length > MAX_TAGS) {
+      return { valid: false, error: `Too many tags (max: ${MAX_TAGS})` };
+    }
+
+    for (const tag of options.tags) {
+      if (typeof tag !== 'string') {
+        return { valid: false, error: 'Tags must be strings' };
+      }
+
+      if (tag.length > MAX_TAG_LENGTH) {
+        return {
+          valid: false,
+          error: `Tag too long: ${tag.substring(0, 20)}... (max: ${MAX_TAG_LENGTH})`,
+        };
+      }
+
+      if (!VALID_TAG_PATTERN.test(tag)) {
+        return {
+          valid: false,
+          error: `Invalid tag characters: ${tag}. Only alphanumeric, hyphen, underscore allowed.`,
+        };
+      }
+    }
+  }
+
+  // Source validation
+  if (options?.source) {
+    if (typeof options.source !== 'string') {
+      return { valid: false, error: 'Source must be a string' };
+    }
+
+    if (options.source.length > MAX_SOURCE_LENGTH) {
+      return {
+        valid: false,
+        error: `Source too long (max: ${MAX_SOURCE_LENGTH} characters)`,
+      };
+    }
+  }
+
+  // Importance validation
+  if (options?.importance !== undefined) {
+    if (typeof options.importance !== 'number' || isNaN(options.importance)) {
+      return { valid: false, error: 'Importance must be a number' };
+    }
+
+    if (options.importance < MIN_IMPORTANCE || options.importance > MAX_IMPORTANCE) {
+      return {
+        valid: false,
+        error: `Importance out of range (${MIN_IMPORTANCE}-${MAX_IMPORTANCE})`,
+      };
+    }
+  }
+
+  // Metadata size check
+  if (options?.metadata) {
+    try {
+      const metadataSize = JSON.stringify(options.metadata).length;
+      if (metadataSize > MAX_METADATA_SIZE) {
+        return {
+          valid: false,
+          error: `Metadata too large: ${metadataSize} bytes (max: ${MAX_METADATA_SIZE})`,
+        };
+      }
+    } catch {
+      return { valid: false, error: 'Metadata is not serializable' };
+    }
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Security: Sanitize tags (lowercase, remove invalid chars)
+ */
+function sanitizeTags(tags: string[] | undefined): string[] | undefined {
+  if (!tags) return undefined;
+  return tags.map((tag) =>
+    tag
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '')
+      .substring(0, MAX_TAG_LENGTH)
+  ).filter((tag) => tag.length > 0);
+}
 
 /**
  * Add content to memory and return a reference ID
@@ -23,12 +152,25 @@ export async function memoryAdd(
     metadata?: Record<string, unknown>;
   }
 ): Promise<ToolResult> {
+  // Security: Validate input to prevent DoS and injection
+  const validation = validateMemoryAddInput(content, options);
+  if (!validation.valid) {
+    return {
+      success: false,
+      error: `Validation failed: ${validation.error}`,
+    };
+  }
+
   try {
     const service = getMemoryService();
+
+    // Security: Sanitize tags before storage
+    const sanitizedTags = sanitizeTags(options?.tags);
+
     const result = await service.add(content, {
       namespace,
-      tags: options?.tags,
-      source: options?.source,
+      tags: sanitizedTags,
+      source: options?.source?.substring(0, MAX_SOURCE_LENGTH),
       importance: options?.importance,
       metadata: options?.metadata,
     });
@@ -68,13 +210,35 @@ export async function memorySearch(
     includeContent?: boolean;
   }
 ): Promise<ToolResult> {
+  // Security: Validate query length
+  if (!query || query.trim() === '') {
+    return {
+      success: false,
+      error: 'Query cannot be empty',
+    };
+  }
+
+  if (query.length > MAX_QUERY_LENGTH) {
+    return {
+      success: false,
+      error: `Query too long (max: ${MAX_QUERY_LENGTH} characters)`,
+    };
+  }
+
+  // Security: Sanitize tags in search options
+  const sanitizedOptions = {
+    ...options,
+    tags: sanitizeTags(options?.tags),
+    limit: Math.min(options?.limit || 10, 100), // Cap limit at 100
+  };
+
   try {
     const service = getMemoryService();
     const results = await service.search(query, {
-      namespace: options?.namespace,
-      tags: options?.tags,
-      limit: options?.limit,
-      includeContent: options?.includeContent,
+      namespace: sanitizedOptions.namespace,
+      tags: sanitizedOptions.tags,
+      limit: sanitizedOptions.limit,
+      includeContent: sanitizedOptions.includeContent,
     });
 
     if (results.length === 0) {

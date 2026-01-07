@@ -241,7 +241,7 @@ export function checkTextSafety(): EnvCheckResult {
   const hasUtf8Guard = fs.existsSync(utf8GuardPath);
 
   if (!hasSafeReplace || !hasUtf8Guard) {
-    const missing = [];
+    const missing: string[] = [];
     if (!hasSafeReplace) missing.push('safe-replace.ts');
     if (!hasUtf8Guard) missing.push('utf8-guard.ts');
 
