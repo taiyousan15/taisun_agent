@@ -29,6 +29,8 @@
 - [x] エラー時にsuccess: trueを返していないか
 - [x] execSyncの文字列補間を使っていないか
 - [x] 空のcatchブロックがないか
+- [ ] 日本語/マルチバイトファイルの編集は safe-replace を使用したか
+- [ ] 完了前に utf8-guard を通したか
 
 ## Plan (file-level)
 - files:

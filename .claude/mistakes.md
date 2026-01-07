@@ -50,3 +50,18 @@
   - [ ] ワイルドカード許可は本番環境で使わない
   - [ ] ネットワークアクセス設定はデフォルト deny
 - **Related constraints**: 最小権限の原則
+
+---
+
+## 2026-01-07 Mistake: utf8-boundary-crash
+- **Symptom**: 日本語/マルチバイト文字を含むファイルの一括置換でクラッシュ（`byte index is not a char boundary`）または文字化け（U+FFFD混入）
+- **Root cause**: UTF-8文字列をバイト位置でスライス/置換する処理が文字境界を考慮していない
+- **Where it happened**: Claude Code内蔵の一括置換機能（外部要因のため修正不可）
+- **Fix**: safe-replace.ts を使用した安全な置換に移行
+- **Prevention**:
+  - [ ] Claude Code内蔵の一括置換は日本語ファイルに使用禁止
+  - [ ] 置換は `npm run text:safe-replace` 経由で実行
+  - [ ] 完了前に `npm run text:utf8-guard` で文字化けをチェック
+  - [ ] 文字化けが発生したら `git restore` またはバックアップから復旧
+- **Related constraints**: 運用手順の遵守、品質ゲートの通過
+- **Documentation**: `docs/operations/text-safety-ja.md`

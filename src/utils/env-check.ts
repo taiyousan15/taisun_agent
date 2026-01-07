@@ -206,7 +206,7 @@ export function checkGitConfig(): EnvCheckResult {
       name: 'Git',
       status: 'error',
       message: 'Not in a Git repository',
-      advice: 'Initialize a Git repository with: git init',
+      advice: t('env.missing.git_repo'),
     };
   }
 
@@ -231,6 +231,36 @@ export function checkGitConfig(): EnvCheckResult {
 }
 
 /**
+ * Check text safety tools availability
+ */
+export function checkTextSafety(): EnvCheckResult {
+  const safeReplacePath = path.join(process.cwd(), 'scripts', 'text', 'safe-replace.ts');
+  const utf8GuardPath = path.join(process.cwd(), 'scripts', 'text', 'utf8-guard.ts');
+
+  const hasSafeReplace = fs.existsSync(safeReplacePath);
+  const hasUtf8Guard = fs.existsSync(utf8GuardPath);
+
+  if (!hasSafeReplace || !hasUtf8Guard) {
+    const missing = [];
+    if (!hasSafeReplace) missing.push('safe-replace.ts');
+    if (!hasUtf8Guard) missing.push('utf8-guard.ts');
+
+    return {
+      name: 'Text Safety Tools',
+      status: 'warning',
+      message: `Missing text safety tools: ${missing.join(', ')}`,
+      advice: t('env.missing.text_safety'),
+    };
+  }
+
+  return {
+    name: 'Text Safety Tools',
+    status: 'ok',
+    message: 'Text safety tools available (safe-replace, utf8-guard)',
+  };
+}
+
+/**
  * Run all environment checks
  */
 export function runEnvChecks(): EnvCheckSummary {
@@ -241,6 +271,7 @@ export function runEnvChecks(): EnvCheckSummary {
     checkGitHubToken(),
     checkGhCli(),
     checkConfigFiles(),
+    checkTextSafety(),
   ];
 
   const critical = results.filter((r) => r.status === 'error').length;

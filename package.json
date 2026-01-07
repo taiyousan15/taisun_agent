@@ -59,7 +59,10 @@
     "briefing:sync": "npx ts-node scripts/session-briefing.ts --sync",
     "contract:lint": "npx ts-node scripts/contract-lint.ts",
     "mistake:testgen": "npx ts-node scripts/mistake-to-test.ts",
-    "quality:check": "npm run contract:lint && npm test"
+    "text:safe-replace": "npx ts-node scripts/text/safe-replace.ts",
+    "text:utf8-guard": "npx ts-node scripts/text/utf8-guard.ts",
+    "quality:encoding": "npx ts-node scripts/text/utf8-guard.ts",
+    "quality:check": "npm run contract:lint && npm run quality:encoding && npm test"
   },
   "keywords": [
     "ai",
