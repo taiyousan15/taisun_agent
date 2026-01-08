@@ -84,6 +84,7 @@ Claude: code-reviewer エージェントで分析します...
 | ドキュメント | 内容 |
 |-------------|------|
 | [QUICK_START.md](docs/QUICK_START.md) | 詳細セットアップ手順 |
+| [CONTEXT_MANAGEMENT.md](docs/CONTEXT_MANAGEMENT.md) | コンテキスト管理システム完全ガイド（99%削減の仕組み） |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | エラー解決 |
 | [CONFIG.md](docs/CONFIG.md) | 設定カスタマイズ |
 | [CONTRIBUTING.md](docs/CONTRIBUTING.md) | 開発参加方法 |
