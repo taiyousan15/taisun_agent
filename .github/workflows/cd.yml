@@ -104,7 +104,7 @@ jobs:
           # Note: .claude directory is excluded from deployment package
 
       - name: Upload deployment package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: deployment-${{ needs.prepare.outputs.version }}
           path: deployment/
