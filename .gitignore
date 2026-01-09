@@ -62,3 +62,4 @@ docs/exports/
 # Mac duplicate files
 *\ 2.*
 *\ 2
+test-results.txt
