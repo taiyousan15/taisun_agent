@@ -7,6 +7,14 @@
       "disabled": false,
       "description": "TAISUN Proxy MCP (single entrypoint). Router+Memory+Chrome skills+Skillize+Supervisor.",
       "category": "system"
+    },
+    "youtube": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/Users/matsumototoshihiko/mcp-youtube/dist/index.js"],
+      "disabled": false,
+      "description": "YouTube downloader - download subtitles from YouTube videos",
+      "category": "media"
     }
   }
 }

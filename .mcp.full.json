@@ -68,6 +68,14 @@
       "description": "YouTube auto research, analysis, and script generation system",
       "category": "media"
     },
+    "youtube": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/Users/matsumototoshihiko/mcp-youtube/dist/index.js"],
+      "disabled": false,
+      "description": "YouTube subtitle downloader using yt-dlp",
+      "category": "media"
+    },
     "miyabi-mcp": {
       "type": "stdio",
       "command": "npx",
@@ -256,7 +264,7 @@
       "reasoning": "Sequential Thinking",
       "system": "Filesystem"
     },
-    "totalServers": 32,
+    "totalServers": 33,
     "taisunTools": {
       "description": "203+ MCP Tools available via taisun package",
       "reference": "../taisun/dist/mcp/tools/",
