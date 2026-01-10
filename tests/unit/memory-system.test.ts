@@ -4,6 +4,8 @@
  * Tests for M3: Memory System with short/long namespace separation
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { MemoryService, InMemoryStore } from '../../src/proxy-mcp/memory';
 import { memoryAdd, memorySearch, memoryStats, memoryClearAll, memoryDelete, memoryCleanup } from '../../src/proxy-mcp/tools/memory';
 
@@ -448,6 +450,110 @@ describe('Memory System', () => {
         // Output should be minimal regardless of content size
         const outputSize = JSON.stringify(result).length;
         expect(outputSize).toBeLessThan(5000); // Much smaller than 100000
+      });
+    });
+
+    describe('memoryAdd with content_path', () => {
+      it('should read and store file content', async () => {
+        // Create a temporary test file
+        const tempFilePath = path.join(process.cwd(), 'test-content-path-file.txt');
+        const testContent = 'This is test content from file';
+
+        try {
+          fs.writeFileSync(tempFilePath, testContent, 'utf-8');
+
+          const result = await memoryAdd(undefined, 'short-term', {
+            contentPath: tempFilePath,
+          });
+
+          expect(result.success).toBe(true);
+          expect(result.referenceId).toBeDefined();
+          expect((result.data as { contentLength: number }).contentLength).toBe(testContent.length);
+          expect((result.data as { message: string }).message).toContain('test-content-path-file.txt');
+        } finally {
+          // Cleanup
+          if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+          }
+        }
+      });
+
+      it('should reject both content and content_path', async () => {
+        const result = await memoryAdd('direct content', 'short-term', {
+          contentPath: 'some/path.txt',
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('両方を指定することはできません');
+      });
+
+      it('should reject neither content nor content_path', async () => {
+        const result = await memoryAdd(undefined, 'short-term', {});
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('いずれかを指定してください');
+      });
+
+      it('should reject path traversal attempts', async () => {
+        const result = await memoryAdd(undefined, 'short-term', {
+          contentPath: '../../../etc/passwd',
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/ファイルが見つかりません|セキュリティエラー/);
+      });
+
+      it('should reject non-existent files', async () => {
+        const result = await memoryAdd(undefined, 'short-term', {
+          contentPath: 'non-existent-file-12345.txt',
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('ファイルが見つかりません');
+      });
+
+      it('should reject files exceeding size limit', async () => {
+        const tempFilePath = path.join(process.cwd(), 'test-large-file.txt');
+
+        try {
+          // Create a file larger than 10MB
+          const largeContent = 'A'.repeat(11 * 1024 * 1024);
+          fs.writeFileSync(tempFilePath, largeContent, 'utf-8');
+
+          const result = await memoryAdd(undefined, 'short-term', {
+            contentPath: tempFilePath,
+          });
+
+          expect(result.success).toBe(false);
+          expect(result.error).toContain('ファイルサイズが上限を超えています');
+        } finally {
+          // Cleanup
+          if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+          }
+        }
+      });
+
+      it('should reject non-UTF8 files', async () => {
+        const tempFilePath = path.join(process.cwd(), 'test-invalid-utf8.txt');
+
+        try {
+          // Write invalid UTF-8 sequence
+          const invalidUtf8 = Buffer.from([0xFF, 0xFE, 0xFD]);
+          fs.writeFileSync(tempFilePath, invalidUtf8);
+
+          const result = await memoryAdd(undefined, 'short-term', {
+            contentPath: tempFilePath,
+          });
+
+          expect(result.success).toBe(false);
+          expect(result.error).toContain('UTF-8エンコーディングエラー');
+        } finally {
+          // Cleanup
+          if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+          }
+        }
       });
     });
 
