@@ -84,6 +84,45 @@ const result = await memory_add(undefined, 'short-term', {
 const refId = result.referenceId;
 ```
 
+### 5.5. セッション記憶の回収（任意）
+
+**OpenCode セッションを後から追えるように回収します**（OpenCode導入済みの場合のみ）：
+
+```bash
+# ディレクトリ準備
+mkdir -p .opencode/exports
+
+# 最新セッションIDを取得
+SESSION_ID=$(opencode session list --max-count 1 --format json 2>/dev/null | jq -r '.[0].id' 2>/dev/null)
+
+# セッションが取得できた場合のみエクスポート
+if [ -n "$SESSION_ID" ] && [ "$SESSION_ID" != "null" ]; then
+  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+  opencode export "$SESSION_ID" > .opencode/exports/session_${TIMESTAMP}.json 2>&1
+
+  echo "Session exported to: .opencode/exports/session_${TIMESTAMP}.json"
+
+  # セッションデータもmemory_addに退避（任意）
+  # const sessionPath = `.opencode/exports/session_${TIMESTAMP}.json`;
+  # const sessionResult = await memory_add(undefined, 'long-term', {
+  #   contentPath: sessionPath,
+  #   metadata: {
+  #     type: 'opencode-session',
+  #     sessionId: SESSION_ID,
+  #     timestamp: new Date().toISOString()
+  #   }
+  # });
+else
+  echo "Note: OpenCode session export skipped (opencode not available or no sessions)"
+fi
+```
+
+**重要な注意**:
+- セッション回収は**任意機能**です
+- OpenCode未導入でもエラーにしない（スキップのみ）
+- export失敗でも修正フロー自体は継続可能
+- セッションデータは後から解析する用途（トラブルシューティング等）
+
 ### 6. Issue/会話に投稿する内容
 
 **大量のログは貼らない**。以下のみを投稿：

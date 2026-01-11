@@ -261,6 +261,71 @@ export function checkTextSafety(): EnvCheckResult {
 }
 
 /**
+ * Check OpenCode/OMO availability (optional feature)
+ */
+export function checkOpenCode(): EnvCheckResult {
+  try {
+    execSync('opencode --version', { stdio: 'pipe' });
+    return {
+      name: 'OpenCode (Optional)',
+      status: 'ok',
+      message: 'OpenCode CLI is available',
+      advice: 'You can use /opencode-setup, /opencode-fix, /opencode-ralph-loop commands.',
+    };
+  } catch {
+    return {
+      name: 'OpenCode (Optional)',
+      status: 'warning',
+      message: 'OpenCode CLI is not installed',
+      advice:
+        'OpenCode/OMO is an optional feature for advanced bug fixing and TDD iteration.\n' +
+        'If needed, see: docs/opencode/README-ja.md\n' +
+        'Note: This is NOT required for normal TAISUN usage.',
+    };
+  }
+}
+
+/**
+ * Check bun/bunx availability (optional, for OMO installation)
+ */
+export function checkBun(): EnvCheckResult {
+  try {
+    execSync('bunx --version', { stdio: 'pipe' });
+    return {
+      name: 'Bun/Bunx (Optional)',
+      status: 'ok',
+      message: 'Bun/Bunx is available',
+    };
+  } catch {
+    return {
+      name: 'Bun/Bunx (Optional)',
+      status: 'warning',
+      message: 'Bun/Bunx is not installed',
+      advice:
+        'Bun/Bunx may be needed if you want to install Oh My OpenCode (OMO).\n' +
+        'Alternative: You can use npx instead of bunx.\n' +
+        'Note: This is NOT required for normal TAISUN usage.',
+    };
+  }
+}
+
+/**
+ * Check for Unicode/encoding issues (reminder)
+ */
+export function checkUnicodeReminder(): EnvCheckResult {
+  return {
+    name: 'Unicode Safety',
+    status: 'ok',
+    message: 'Remember to run `npm run check:unicode` after editing files',
+    advice:
+      'To prevent encoding issues:\n' +
+      '  - Run: npm run check:unicode\n' +
+      '  - Use: npm run text:utf8-guard\n' +
+      '  - See: docs/operations/text-safety-ja.md',
+  };
+}
+
+/**
  * Run all environment checks
  */
 export function runEnvChecks(): EnvCheckSummary {
@@ -272,6 +337,9 @@ export function runEnvChecks(): EnvCheckSummary {
     checkGhCli(),
     checkConfigFiles(),
     checkTextSafety(),
+    checkOpenCode(),
+    checkBun(),
+    checkUnicodeReminder(),
   ];
 
   const critical = results.filter((r) => r.status === 'error').length;
