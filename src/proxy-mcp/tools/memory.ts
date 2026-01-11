@@ -5,8 +5,11 @@
  * and minimal output principle (summary + refId center).
  *
  * Security: Input validation added to prevent DoS and injection attacks.
+ * M4 Update: Added content_path support for reading large files safely.
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { ToolResult } from '../types';
 import { getMemoryService, MemoryNamespace, MemoryOutput } from '../memory';
 
@@ -24,26 +27,144 @@ const MAX_METADATA_SIZE = 10000; // 10KB
 const VALID_TAG_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
 /**
+ * Validate UTF-8 encoding using TextDecoder with fatal option
+ */
+function validateUtf8(buffer: Buffer): { valid: boolean; error?: string } {
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  try {
+    decoder.decode(buffer);
+    return { valid: true };
+  } catch {
+    return {
+      valid: false,
+      error: 'Invalid UTF-8 byte sequence detected (文字化けまたは不正なエンコーディング)',
+    };
+  }
+}
+
+/**
+ * Security: Safely read file content with validation
+ *
+ * - Path traversal protection: Only allows files within project root
+ * - Size limit enforcement: Max 10MB
+ * - UTF-8 validation: Checks encoding validity
+ *
+ * @returns Object with success/error and content
+ */
+function readContentFromPath(
+  contentPath: string
+): { success: boolean; content?: string; error?: string } {
+  try {
+    // Security: Resolve to absolute path and check it's within project root
+    const projectRoot = fs.realpathSync(process.cwd());
+    let resolvedPath: string;
+
+    try {
+      resolvedPath = fs.realpathSync(path.resolve(process.cwd(), contentPath));
+    } catch {
+      return {
+        success: false,
+        error: `ファイルが見つかりません: ${contentPath}\n対処: パスを確認してください。プロジェクトルート（${projectRoot}）からの相対パスまたは絶対パスを指定してください。`,
+      };
+    }
+
+    // Path traversal check: Ensure file is within project root
+    if (!resolvedPath.startsWith(projectRoot)) {
+      return {
+        success: false,
+        error: `セキュリティエラー: プロジェクト外のファイルは読み込めません\nパス: ${resolvedPath}\nプロジェクトルート: ${projectRoot}\n対処: プロジェクト内のファイルを指定してください。`,
+      };
+    }
+
+    // Check if file exists and is readable
+    if (!fs.existsSync(resolvedPath)) {
+      return {
+        success: false,
+        error: `ファイルが存在しません: ${resolvedPath}\n対処: ファイルパスを確認してください。`,
+      };
+    }
+
+    const stats = fs.statSync(resolvedPath);
+
+    // Security: Reject if not a file (e.g., directory, symlink to directory)
+    if (!stats.isFile()) {
+      return {
+        success: false,
+        error: `指定されたパスは通常のファイルではありません: ${resolvedPath}\n対処: ディレクトリではなくファイルを指定してください。`,
+      };
+    }
+
+    // Size check before reading
+    if (stats.size > MAX_CONTENT_SIZE) {
+      return {
+        success: false,
+        error: `ファイルサイズが上限を超えています: ${(stats.size / (1024 * 1024)).toFixed(2)}MB (上限: ${MAX_CONTENT_SIZE / (1024 * 1024)}MB)\nファイル: ${resolvedPath}\n対処: より小さいファイルを指定するか、ファイルを分割してください。`,
+      };
+    }
+
+    // Read file as buffer for UTF-8 validation
+    const buffer = fs.readFileSync(resolvedPath);
+
+    // UTF-8 validation
+    const utf8Check = validateUtf8(buffer);
+    if (!utf8Check.valid) {
+      return {
+        success: false,
+        error: `UTF-8エンコーディングエラー: ${utf8Check.error}\nファイル: ${resolvedPath}\n対処: ファイルがUTF-8エンコーディングであることを確認してください。iconv や nkf 等で変換できます。`,
+      };
+    }
+
+    // Convert buffer to string (safe now after validation)
+    const content = buffer.toString('utf-8');
+
+    return {
+      success: true,
+      content,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: `ファイル読み込みエラー: ${error instanceof Error ? error.message : String(error)}\n対処: ファイルの権限とパスを確認してください。`,
+    };
+  }
+}
+
+/**
  * Security: Validate memory add input
  */
 function validateMemoryAddInput(
-  content: string,
+  content: string | undefined,
   options?: {
     tags?: string[];
     source?: string;
     importance?: number;
     metadata?: Record<string, unknown>;
+    contentPath?: string;
   }
 ): { valid: boolean; error?: string } {
-  // Content validation
-  if (!content) {
-    return { valid: false, error: 'Content cannot be empty' };
-  }
+  // Check mutual exclusivity of content and content_path
+  const hasContent = content !== undefined && content !== null && content !== '';
+  const hasContentPath = options?.contentPath !== undefined && options?.contentPath !== null && options?.contentPath !== '';
 
-  if (content.length > MAX_CONTENT_SIZE) {
+  if (hasContent && hasContentPath) {
     return {
       valid: false,
-      error: `Content too large: ${content.length} bytes (max: ${MAX_CONTENT_SIZE})`,
+      error: 'content と content_path の両方を指定することはできません。どちらか一方を指定してください。',
+    };
+  }
+
+  if (!hasContent && !hasContentPath) {
+    return {
+      valid: false,
+      error: 'content または content_path のいずれかを指定してください。',
+    };
+  }
+
+  // Content validation (only if content is provided directly)
+  if (hasContent && content!.length > MAX_CONTENT_SIZE) {
+    return {
+      valid: false,
+      error: `Content too large: ${content!.length} bytes (max: ${MAX_CONTENT_SIZE})`,
     };
   }
 
@@ -141,15 +262,18 @@ function sanitizeTags(tags: string[] | undefined): string[] | undefined {
  * Add content to memory and return a reference ID
  *
  * Output is minimal: refId + summary + metadata only
+ *
+ * M4 Update: Supports content_path for reading large files safely
  */
 export async function memoryAdd(
-  content: string,
+  content: string | undefined,
   namespace: MemoryNamespace = 'short-term',
   options?: {
     tags?: string[];
     source?: string;
     importance?: number;
     metadata?: Record<string, unknown>;
+    contentPath?: string;
   }
 ): Promise<ToolResult> {
   // Security: Validate input to prevent DoS and injection
@@ -161,16 +285,37 @@ export async function memoryAdd(
     };
   }
 
+  // Normalize input: If content_path is provided, read file content
+  let finalContent: string;
+  let contentSource: string | undefined = options?.source;
+
+  if (options?.contentPath) {
+    const readResult = readContentFromPath(options.contentPath);
+    if (!readResult.success) {
+      return {
+        success: false,
+        error: readResult.error!,
+      };
+    }
+    finalContent = readResult.content!;
+    // Auto-set source if not provided
+    if (!contentSource) {
+      contentSource = `file:${options.contentPath}`;
+    }
+  } else {
+    finalContent = content!;
+  }
+
   try {
     const service = getMemoryService();
 
     // Security: Sanitize tags before storage
     const sanitizedTags = sanitizeTags(options?.tags);
 
-    const result = await service.add(content, {
+    const result = await service.add(finalContent, {
       namespace,
       tags: sanitizedTags,
-      source: options?.source?.substring(0, MAX_SOURCE_LENGTH),
+      source: contentSource?.substring(0, MAX_SOURCE_LENGTH),
       importance: options?.importance,
       metadata: options?.metadata,
     });
@@ -182,9 +327,11 @@ export async function memoryAdd(
       data: {
         id: result.id,
         namespace,
-        contentLength: content.length,
+        contentLength: finalContent.length,
         summary: result.summary,
-        message: `Stored ${content.length} chars in ${namespace}. Use memory_search("${result.id}") to retrieve.`,
+        message: options?.contentPath
+          ? `Stored ${finalContent.length} chars from ${options.contentPath} in ${namespace}. Use memory_search("${result.id}") to retrieve.`
+          : `Stored ${finalContent.length} chars in ${namespace}. Use memory_search("${result.id}") to retrieve.`,
       },
     };
   } catch (error) {

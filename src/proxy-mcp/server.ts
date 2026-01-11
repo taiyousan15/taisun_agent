@@ -81,13 +81,17 @@ const TOOLS = [
   },
   {
     name: 'memory_add',
-    description: 'Store large content and return a reference ID. Use this to avoid cluttering conversation.',
+    description: 'Store large content and return a reference ID. Use this to avoid cluttering conversation. Either content or content_path must be provided (not both).',
     inputSchema: {
       type: 'object' as const,
       properties: {
         content: {
           type: 'string',
-          description: 'Content to store',
+          description: 'Content to store directly',
+        },
+        content_path: {
+          type: 'string',
+          description: 'Path to file to read and store (for large logs). Project-relative paths only.',
         },
         type: {
           type: 'string',
@@ -99,7 +103,7 @@ const TOOLS = [
           description: 'Optional metadata',
         },
       },
-      required: ['content'],
+      required: [],
     },
   },
   {
@@ -147,9 +151,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     case 'memory_add':
       result = await memoryAdd(
-        args?.content as string,
+        args?.content as string | undefined,
         (args?.type as 'short-term' | 'long-term') || 'short-term',
-        args?.metadata as Record<string, unknown> | undefined
+        {
+          ...args?.metadata as Record<string, unknown> | undefined,
+          contentPath: args?.content_path as string | undefined,
+        }
       );
       break;
 

@@ -330,7 +330,7 @@ TAISUN v2では、**3つのMCPサーバー**と**11のMCPツール**を提供し
 | `system_health` | システム稼働状況確認、ヘルスチェック | `mcp__taisun-proxy__system_health()` |
 | `skill_search` | 66スキルの検索（キーワードまたは全件） | `skill_search(query="taiyo")` |
 | `skill_run` | スキルのロード・実行 | `skill_run(name="youtube-thumbnail")` |
-| `memory_add` | 大規模コンテンツの保存、参照ID発行 | `memory_add(content="データ", type="long-term")` |
+| `memory_add` | 大規模コンテンツの保存、参照ID発行<br>- `content`: 直接テキスト保存<br>- `content_path`: ファイルを読み込んで保存（巨大ログ向け） | `memory_add(content="データ", type="long-term")`<br>`memory_add(content_path="logs/output.log", type="short-term")` |
 | `memory_search` | 参照IDまたはキーワードでメモリ検索 | `memory_search(query="LP作成")` |
 
 **内部MCP（Rollout管理）:**
