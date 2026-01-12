@@ -15,6 +15,8 @@ import type {
   PhaseTransitionResult,
   Condition,
   ConditionalNext,
+  ParallelNext,
+  ParallelExecutionState,
 } from './types';
 
 /**
@@ -357,16 +359,123 @@ function determineNextPhase(currentPhase: WorkflowPhase): string | null {
     );
   }
 
-  // 2. 並列実行がある場合（Phase 3 - 未実装）
+  // 2. 並列実行がある場合（Phase 3）
   if (currentPhase.parallelNext) {
-    // TODO: Phase 3 並列実行の実装
-    throw new Error(
-      '並列実行はまだ実装されていません。Phase 3で実装予定です。'
-    );
+    // 並列実行の開始は特別な処理が必要
+    // ここでは最初の並列フェーズIDを返す（実際の並列実行はtransitionで処理）
+    return currentPhase.parallelNext.phases[0] ?? null;
   }
 
   // 3. 通常遷移
   return currentPhase.nextPhase ?? null;
+}
+
+// ========================================
+// Phase 3: Parallel Execution
+// ========================================
+
+/**
+ * 並列実行を開始
+ * @param parallelNext 並列実行定義
+ * @returns 並列実行状態
+ */
+function startParallelExecution(
+  parallelNext: ParallelNext
+): ParallelExecutionState {
+  const state = loadState();
+  if (!state) {
+    throw new Error('No active workflow');
+  }
+
+  const parallelState: ParallelExecutionState = {
+    parallelGroupId: `parallel_${Date.now()}`,
+    startedPhases: [...parallelNext.phases],
+    completedPhases: [],
+    waitStrategy: parallelNext.waitStrategy,
+    startedAt: new Date().toISOString(),
+  };
+
+  // 状態に追加
+  if (!state.parallelExecutions) {
+    state.parallelExecutions = [];
+  }
+  state.parallelExecutions.push(parallelState);
+
+  saveState(state);
+
+  return parallelState;
+}
+
+/**
+ * 並列フェーズの完了を記録
+ * @param phaseId 完了したフェーズID
+ */
+function completeParallelPhase(phaseId: string): void {
+  const state = loadState();
+  if (!state || !state.parallelExecutions) {
+    return;
+  }
+
+  // アクティブな並列実行を見つける
+  const activeParallel = state.parallelExecutions.find(
+    (p) => p.startedPhases.includes(phaseId) && !p.completedAt
+  );
+
+  if (!activeParallel) {
+    return;
+  }
+
+  // 完了マーク
+  if (!activeParallel.completedPhases.includes(phaseId)) {
+    activeParallel.completedPhases.push(phaseId);
+  }
+
+  // 完了条件チェック
+  const shouldComplete =
+    activeParallel.waitStrategy === 'all'
+      ? activeParallel.completedPhases.length ===
+        activeParallel.startedPhases.length
+      : activeParallel.completedPhases.length > 0;
+
+  if (shouldComplete) {
+    activeParallel.completedAt = new Date().toISOString();
+  }
+
+  saveState(state);
+}
+
+/**
+ * 並列実行が完了しているか確認
+ * @returns 完了している場合true
+ */
+function isParallelExecutionComplete(): boolean {
+  const state = loadState();
+  if (!state || !state.parallelExecutions) {
+    return true; // 並列実行なし = 完了扱い
+  }
+
+  const activeParallel = state.parallelExecutions.find((p) => !p.completedAt);
+  return !activeParallel;
+}
+
+/**
+ * 現在のフェーズが並列実行グループの一部か確認
+ * @param phaseId チェックするフェーズID
+ * @returns 並列実行グループの一部の場合、そのグループ情報
+ */
+function getParallelExecutionForPhase(
+  phaseId: string
+): ParallelExecutionState | null {
+  const state = loadState();
+  if (!state || !state.parallelExecutions) {
+    return null;
+  }
+
+  return (
+    state.parallelExecutions.find(
+      (p) => p.startedPhases.includes(phaseId) && !p.completedAt
+    ) ?? null
+  );
 }
 
 /**
@@ -404,7 +513,132 @@ export function transitionToNextPhase(): PhaseTransitionResult {
     };
   }
 
-  // Determine next phase (Phase 3: supports conditional branching)
+  // Phase 3: 並列実行グループの一部か確認
+  const parallelGroup = getParallelExecutionForPhase(state.currentPhase);
+
+  if (parallelGroup) {
+    // 並列実行中のフェーズを完了としてマーク（内部でsaveState()を呼ぶ）
+    completeParallelPhase(state.currentPhase);
+
+    // 状態を再読み込み
+    const updatedState = loadState();
+    if (!updatedState) {
+      return {
+        success: false,
+        errors: ['Failed to reload state after completing parallel phase'],
+        message: '並列フェーズ完了後の状態読み込みに失敗しました',
+      };
+    }
+
+    // 並列グループ全体が完了したか確認
+    const updatedGroup = getParallelExecutionForPhase(updatedState.currentPhase);
+
+    if (updatedGroup && updatedGroup.completedAt) {
+      // 並列グループ完了：次の共通フェーズに遷移
+      const nextPhaseId = currentPhase.nextPhase;
+
+      if (!nextPhaseId) {
+        return {
+          success: false,
+          errors: [],
+          message: `Phase ${currentPhase.id} は最終フェーズです。`,
+        };
+      }
+
+      updatedState.completedPhases.push(updatedState.currentPhase);
+      updatedState.currentPhase = nextPhaseId;
+      updatedState.lastUpdatedAt = new Date().toISOString();
+      saveState(updatedState);
+
+      return {
+        success: true,
+        newPhase: nextPhaseId,
+        errors: [],
+        message: `✅ 並列実行完了。Phase ${nextPhaseId} に進みました`,
+      };
+    } else {
+      // まだ他の並列フェーズが未完了
+      // 次の未完了並列フェーズに遷移
+      const nextParallelPhase = updatedGroup?.startedPhases.find(
+        (phaseId) =>
+          updatedGroup &&
+          !updatedGroup.completedPhases.includes(phaseId) &&
+          phaseId !== updatedState.currentPhase
+      );
+
+      if (nextParallelPhase && updatedGroup) {
+        updatedState.completedPhases.push(updatedState.currentPhase);
+        updatedState.currentPhase = nextParallelPhase;
+        updatedState.lastUpdatedAt = new Date().toISOString();
+        saveState(updatedState);
+
+        return {
+          success: true,
+          newPhase: nextParallelPhase,
+          errors: [],
+          message: `✅ 次の並列フェーズ ${nextParallelPhase} に進みました（残り: ${
+            updatedGroup.startedPhases.length -
+            updatedGroup.completedPhases.length
+          }）`,
+        };
+      } else {
+        // 自分以外の並列フェーズが全て完了（waitStrategy='any'の場合）
+        const nextPhaseId = currentPhase.nextPhase;
+
+        if (!nextPhaseId) {
+          return {
+            success: false,
+            errors: [],
+            message: `Phase ${currentPhase.id} は最終フェーズです。`,
+          };
+        }
+
+        updatedState.completedPhases.push(updatedState.currentPhase);
+        updatedState.currentPhase = nextPhaseId;
+        updatedState.lastUpdatedAt = new Date().toISOString();
+        saveState(updatedState);
+
+        return {
+          success: true,
+          newPhase: nextPhaseId,
+          errors: [],
+          message: `✅ 並列実行完了。Phase ${nextPhaseId} に進みました`,
+        };
+      }
+    }
+  }
+
+  // Phase 3: 並列実行の開始
+  if (currentPhase.parallelNext) {
+    // 並列実行グループを作成（内部でsaveState()を呼ぶ）
+    const parallelState = startParallelExecution(currentPhase.parallelNext);
+
+    // 最初の並列フェーズに遷移（状態を再読み込み）
+    const updatedState = loadState();
+    if (!updatedState) {
+      return {
+        success: false,
+        errors: ['Failed to reload state after parallel execution start'],
+        message: '並列実行開始後の状態読み込みに失敗しました',
+      };
+    }
+
+    const firstParallelPhase = parallelState.startedPhases[0];
+
+    updatedState.completedPhases.push(updatedState.currentPhase);
+    updatedState.currentPhase = firstParallelPhase;
+    updatedState.lastUpdatedAt = new Date().toISOString();
+    saveState(updatedState);
+
+    return {
+      success: true,
+      newPhase: firstParallelPhase,
+      errors: [],
+      message: `✅ 並列実行開始。Phase ${firstParallelPhase} に進みました（並列: ${parallelState.startedPhases.length}個）`,
+    };
+  }
+
+  // 通常の遷移（Phase 1-2, Phase 3条件分岐）
   let nextPhaseId: string | null;
   try {
     nextPhaseId = determineNextPhase(currentPhase);
