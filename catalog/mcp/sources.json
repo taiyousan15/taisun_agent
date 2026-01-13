@@ -1,0 +1,23 @@
+{
+  "$schema": "./sources.schema.json",
+  "sources": [
+    {
+      "id": "awesome-mcp-servers",
+      "name": "Awesome MCP Servers",
+      "url": "https://raw.githubusercontent.com/punkpeye/awesome-mcp-servers/main/README.md",
+      "type": "markdown",
+      "description": "Curated list of MCP servers from the community",
+      "lastImported": null,
+      "enabled": true
+    },
+    {
+      "id": "official-mcp-servers",
+      "name": "Anthropic Official MCP Servers",
+      "url": "https://raw.githubusercontent.com/anthropics/mcp-servers/main/README.md",
+      "type": "markdown",
+      "description": "Official MCP servers from Anthropic",
+      "lastImported": null,
+      "enabled": true
+    }
+  ]
+}

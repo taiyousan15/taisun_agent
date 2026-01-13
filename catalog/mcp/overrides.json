@@ -1,0 +1,25 @@
+{
+  "$schema": "./overrides.schema.json",
+  "description": "Manual score adjustments for MCP catalog entries",
+  "overrides": {
+    "puppeteer-mcp": {
+      "scoreAdjustment": 10,
+      "reason": "Core browser automation, well-maintained"
+    },
+    "playwright-mcp": {
+      "scoreAdjustment": 10,
+      "reason": "Core browser automation, well-maintained"
+    },
+    "shell-exec-mcp": {
+      "scoreAdjustment": -50,
+      "reason": "Dangerous: arbitrary shell execution",
+      "requireHuman": true
+    },
+    "root-access-mcp": {
+      "scoreAdjustment": -100,
+      "reason": "Dangerous: root/admin access",
+      "requireHuman": true,
+      "blocked": true
+    }
+  }
+}
