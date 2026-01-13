@@ -30,11 +30,27 @@ module.exports = {
     {
       displayName: 'unit',
       preset: 'ts-jest',
-      testMatch: ['<rootDir>/src/**/*.test.ts', '<rootDir>/tests/unit/**/*.test.ts'],
+      testMatch: [
+        '<rootDir>/src/**/*.test.ts',
+        '<rootDir>/tests/unit/**/*.test.ts',
+        // Exclude Phase 3 workflow tests (run in separate project)
+        '!<rootDir>/tests/unit/workflow-phase3-*.test.ts'
+      ],
       testEnvironment: 'node',
       transform: {
         '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
       },
+    },
+    {
+      displayName: 'workflow-phase3',
+      preset: 'ts-jest',
+      testMatch: ['<rootDir>/tests/unit/workflow-phase3-*.test.ts'],
+      testEnvironment: 'node',
+      transform: {
+        '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
+      },
+      // Run Phase 3 tests serially to avoid file system conflicts
+      maxWorkers: 1,
     },
     {
       displayName: 'integration',

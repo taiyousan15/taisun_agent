@@ -10,6 +10,7 @@
     "test:silent": "jest --silent --noStackTrace",
     "test:summary": "jest --verbose=false --noStackTrace 2>&1 | tail -20",
     "test:unit": "jest --selectProjects unit",
+    "test:workflow-phase3": "jest --selectProjects workflow-phase3 --runInBand",
     "test:integration": "jest --selectProjects integration",
     "test:agents": "jest --selectProjects integration --testPathPattern=agents.integration",
     "test:skills": "jest --selectProjects integration --testPathPattern=skills.integration",
