@@ -217,7 +217,7 @@ jobs:
       name: ${{ needs.prepare.outputs.environment }}
     steps:
       - name: Download previous deployment package
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v11
         with:
           name: deployment-${{ inputs.rollback_version }}
           workflow: cd.yml
